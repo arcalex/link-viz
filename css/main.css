@@ -1,0 +1,65 @@
+/**
+ *
+ *
+ * Copyright (C) 2020-2021  Bibliotheca Alexandrina
+ *
+ *
+ * The JavaScript code in this page is free software: you can
+ * redistribute it and/or modify it under the terms of the GNU
+ * General Public License (GNU GPL) as published by the Free Software
+ * Foundation, either version 3 of the License, or (at your option)
+ * any later version.  The code is distributed WITHOUT ANY WARRANTY;
+ * without even the implied warranty of MERCHANTABILITY or FITNESS
+ * FOR A PARTICULAR PURPOSE.  See the GNU GPL for more details.
+ *
+ * As additional permission under GNU GPL version 3 section 7, you
+ * may distribute non-source (e.g., minimized or compacted) forms of
+ * that code without the copy of the GNU GPL normally required by
+ * section 4, provided you include this license notice and a URL
+ * through which recipients can access the Corresponding Source.
+ *
+ *
+ */
+
+html {
+  overflow-y: hidden; /* All browsers without overlaying scrollbars */ /* This is important as you need to remove permenant scrollbar without necessary */
+}
+
+
+.graph-locator-icon {
+  background-image: url('~assets/images/graph-locator.svg');
+}
+
+.visor-icon {
+  background-image: url('~assets/images/visor.svg');
+}
+
+.flag-visor-icon {
+  background-image: url('~assets/images/flag-visor.svg');
+}
+
+.file-type-visor-icon {
+  background-image: url('~assets/images/file-visor.svg');
+}
+
+.path-finder-group-icon{background-image: url('~assets/images/finders.svg');}
+
+.path-finder-icon {
+  background-image: url('~assets/images/pathFinder.svg');
+}
+
+.loop-finder-icon {
+  background-image: url('~assets/images/loopFinder.svg');
+}
+
+
+/* Base attributes for custom icon */
+.base-custom-icon {
+  background-size: contain;
+  background-repeat: no-repeat;
+}
+
+
+.train-icon {
+  background-image: url(https://www.svgrepo.com/show/9344/train.svg);
+}
