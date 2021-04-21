@@ -1,11 +1,13 @@
 
 import { createServer } from "http";
 import got from "got";
+// import { error } from "console";
 // import got from "got/dist/source";
 // import { createServer } from "https";
 // import request from "request"
 
 const listeningPort = 8080
+const downloadTimeout = 2500
 createServer((req, res) => {
     req.on('error', (err) => {
         // Error in request
@@ -23,12 +25,20 @@ createServer((req, res) => {
             }
             try {
                 // Download this favicon
-                console.log('createServer, before res.setHeader')
                 res.setHeader("content-disposition", "attachment; filename=favicon.ico");
-                // request('https://www.google.com/favicon.ico').pipe(res);
-                console.log('createServer, request')
-                got.stream(faviconURL).pipe(res);
-                console.log('createServer, post request')
+
+                let downloadStream = got.stream(faviconURL, { "timeout": downloadTimeout });
+                downloadStream.on("error", (error) => {
+                    // console.log(error)
+                    res.statusCode = 404;
+                    res.end();
+                    return
+                })
+                res.on("error", (error) => {
+                    console.log('Response error while downloading: ' + error)
+                })
+                downloadStream.pipe(res);
+                // console.log('createServer, post request')
             } catch (error) {
                 // Let it be internal error
                 console.error(error)
