@@ -130,7 +130,7 @@ export default {
   loading: '~/components/RouteLoadingIndicator.vue',
 
   publicRuntimeConfig: {
-    linkservHostname: "http://52.240.55.61/",                          // Hostname of linkserv (given by yid in 23/02/2021)
+    linkservHostname: "https://linkapi.bibalex.org/",                               // Hostname of linkserv (given by yid in 23/02/2021)
     waybackBaseURL: "http://web.archive.bibalex.org/web/",                  // Wayback Base URL
     timeBetweenSnaphotDownload: 100,  // Time between snapshots download (for not overwhelming server)
     frameTime: 500,
