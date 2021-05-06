@@ -21,7 +21,7 @@
  *
  */
 
-const _nodeSizeTypeList = ["uniform",  "inlink-count based", "outlink-count based"] 
+const _nodeSizeTypeList = ["uniform", "inlink-count based", "outlink-count based"]
 const _nodeShapeTypeList = ["FAV icon", "geometric"]
 const _nodeShapeList = ["ellipse",
     "triangle",
@@ -74,6 +74,8 @@ export const state = () => ({
         versionCountDaily: "",
         versions: ""
     },
+
+    // linkservHostname: undefined, // Store link-serv hostname
 
     // Progress Indicator
     progressIndicatorVisibility: false,
@@ -135,7 +137,7 @@ export const getters = {
     getLinkservRequestURLHub(state) {
         return state.linkservRequestURLHub
     },
- 
+
     // Return the state of progress indicator visibility
     getProgressIndicatorVisibility(state) {
         return state.progressIndicatorVisibility
@@ -266,15 +268,29 @@ export const getters = {
     }
 }
 
-// Mutations for state
+// Mutations for state this.$config.linkservHostname
 export const mutations = {
-    setLinkservRequestURLHub(state, { ssurtURL, linkservHostname }) {
-        state.linkservRequestURLHub["graph"] = linkservHostname + '?' + 'operation=getGraph&identifier=' + ssurtURL + '&timestamp={0}&depth={1}' 
-        state.linkservRequestURLHub["latestVersion"] = linkservHostname + '?' + 'operation=getLatestVersion&identifier=' + ssurtURL
-        state.linkservRequestURLHub["versionCountsYearly"] = linkservHostname + '?' + 'operation=getVersionCountsYearly&identifier=' + ssurtURL
-        state.linkservRequestURLHub["versionCountsMonthly"] = linkservHostname + '?' + 'operation=getVersionCountsMonthly&identifier=' + ssurtURL + '&year={0}'
-        state.linkservRequestURLHub["versionCountsDaily"] = linkservHostname + '?' + 'operation=getVersionCountsDaily&identifier=' + ssurtURL + '&year={0}&month={1}'
-        state.linkservRequestURLHub["versions"] =linkservHostname + '?' + 'operation=getVersions&identifier=' + ssurtURL + '&dateTime={0}'     
+    // setLinkservRequestURLHub(state, { /*ssurtURL = undefined,*/ linkservHostname }) {
+    setLinkservRequestURLHub(state, linkservHostname) {
+        // // Initialize only if supplied
+        // if (linkservHostname) {
+        //     state.linkservHostname = linkservHostname
+        // }
+        // Initialize for getting the proper URL
+        // if (ssurtURL) {
+        // state.linkservRequestURLHub["graph"] = state.linkservHostname + '?' + 'operation=getGraph&identifier=' + ssurtURL + '&timestamp={0}&depth={1}'
+        // state.linkservRequestURLHub["latestVersion"] = state.linkservHostname + '?' + 'operation=getLatestVersion&identifier=' + ssurtURL
+        // state.linkservRequestURLHub["versionCountsYearly"] = state.linkservHostname + '?' + 'operation=getVersionCountsYearly&identifier=' + ssurtURL
+        // state.linkservRequestURLHub["versionCountsMonthly"] = state.linkservHostname + '?' + 'operation=getVersionCountsMonthly&identifier=' + ssurtURL + '&year={0}'
+        // state.linkservRequestURLHub["versionCountsDaily"] = state.linkservHostname + '?' + 'operation=getVersionCountsDaily&identifier=' + ssurtURL + '&year={0}&month={1}'
+        // state.linkservRequestURLHub["versions"] = state.linkservHostname + '?' + 'operation=getVersions&identifier=' + ssurtURL + '&dateTime={0}'
+        // }
+        state.linkservRequestURLHub["graph"] = linkservHostname + '?' + 'operation=getGraph&identifier={0}&timestamp={1}&depth={2}'
+        state.linkservRequestURLHub["latestVersion"] = linkservHostname + '?' + 'operation=getLatestVersion&identifier={0}'
+        state.linkservRequestURLHub["versionCountsYearly"] = linkservHostname + '?' + 'operation=getVersionCountsYearly&identifier={0}'
+        state.linkservRequestURLHub["versionCountsMonthly"] = linkservHostname + '?' + 'operation=getVersionCountsMonthly&identifier={0}&year={1}'
+        state.linkservRequestURLHub["versionCountsDaily"] = linkservHostname + '?' + 'operation=getVersionCountsDaily&identifier={0}&year={1}&month={2}'
+        state.linkservRequestURLHub["versions"] = linkservHostname + '?' + 'operation=getVersions&identifier={0}&dateTime={1}'
     },
 
     setProgressIndicatorVisibility(state, progressIndicatorVisibility) {
@@ -384,8 +400,8 @@ export const mutations = {
 
 // Actions for changing state
 export const actions = {
-    setLinkservRequestURLHub({ state, commit }, { ssurtURL, linkservHostname }) {
-        commit('setLinkservRequestURLHub', { ssurtURL, linkservHostname });
+    setLinkservRequestURLHub({ state, commit }, linkservHostname) {
+        commit('setLinkservRequestURLHub', linkservHostname);
     },
 
     setProgressIndicatorVisibility({ state, commit }, progressIndicatorVisibility) {

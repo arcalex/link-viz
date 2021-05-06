@@ -256,8 +256,9 @@ export default {
     async loadVersionCountDaily(year, month) {
       return await this.$axios.get(
         this.getLinkservRequestURLHub["versionCountDaily"]
-          .replace("{0}", year)
-          .replace("{1}", month)
+          .replace('{0}', this.targetURLInSSURT)
+          .replace('{1}', year)
+          .replace('{2}', month)
       );
     },
 
@@ -265,8 +266,9 @@ export default {
     // year, month and day should all be string
     async loadVersions(year, month, day) {
       return await this.$axios.get(
-        this.getLinkservRequestURLHub["versions"].replace(
-          "{0}",
+        this.getLinkservRequestURLHub["versions"]
+        .replace('{0}', this.targetURLInSSURT)
+        .replace('{1}',
           // `${year}-${month}-${day <= 9 ? "0" : ""}${day}`
           `${year}${month}${day <= 9 ? "0" : ""}${day}`
         )
