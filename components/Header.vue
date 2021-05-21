@@ -4,7 +4,7 @@
   <v-app-bar dense dark color="black">
     <div v-if="this.$route.path !== '/'">
       <nuxt-link to="/" v-if="this.$route.path !== '/'">
-        <img src="~/assets/images/linkGate_Home.png" />
+        <img src="~/assets/images/linkGate_logo_white.png" />
       </nuxt-link>
     </div>
 
