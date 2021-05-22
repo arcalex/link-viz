@@ -2,7 +2,7 @@
   <v-container fluid class="home-container">
     <div class="flex-container d-flex flex-column justify-center align-center">
       <div>
-        <v-img :src="require('~/assets/images/linkGate_Home.png')"></v-img>
+        <v-img :src="require('~/assets/images/linkGate_logo_black.png')"></v-img>
       </div>
       <div class="subtitle">Web Archive Graph Visualization</div>
       <div class="d-flex justify-center" style="width: 40%">
@@ -21,8 +21,8 @@
         time-travel capabilities!
         <br />
         LinkGate is being developed with funding by
-        <a href="https://netpreserve.org/"
-          >the International Internet Preservation Consortium (IIPC)</a
+        the<a href="https://netpreserve.org/"
+          >International Internet Preservation Consortium (IIPC)</a
         >
       </p>
       <div>

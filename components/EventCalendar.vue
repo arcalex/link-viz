@@ -24,16 +24,23 @@
       @click:event="showSnapshotList"
     ></v-calendar>
 
-    <v-menu
+    <!-- Snapshot List -->
+    <!-- <v-menu
       absolute
       offset-y
       v-model="snapshotDialogShown"
       min-width="10%"
-      ref="calendar"
       max-height="20%"
       :position-x="mousePosX"
       :position-y="mousePosY"
       :close-on-content-click="false"
+    > -->
+    <v-dialog
+      v-model="snapshotDialogShown"
+      persistent
+      max-width="15%"
+      overlay-opacity="0.3"
+      overlay-color="#222222"
     >
       <v-card color="teal" raised outlined>
         <v-system-bar color="#333">
@@ -66,7 +73,8 @@
           </v-list-item>
         </v-list>
       </v-card>
-    </v-menu>
+    </v-dialog>
+    <!-- </v-menu> -->
   </v-card>
 </template>
 
@@ -113,12 +121,16 @@ export default {
       type: String,
       required: true,
     },
+    targetURLInSSURT: {
+      type: String,
+      required: true,
+    },
   },
   data() {
     return {
       snapshotDialogShown: false, // Flag for toggling snapshot dialog visibility
-      mousePosX: null, // Mouse x-position
-      mousePosY: null, // Mouse y-position
+      // mousePosX: null, // Mouse x-position
+      // mousePosY: null, // Mouse y-position
       snapshotList: [], // Snapshot List
       selectedDay: null, // Selected day for a list of snapshots
       // Events showing snapshot count
@@ -171,8 +183,9 @@ export default {
 
     // Fill Calendar with events count per day
     async fillCalnedarWithEventsCount() {
-      await this.loadVersionCountDaily(this.year, this.month)
-        .then((response) => {
+      // console.log('fillCalnedarWithEventsCount, this.targetURLInSSURT: ' + this.targetURLInSSURT)
+      await this.loadVersionCountDaily(this.year, this.month).then(
+        (response) => {
           this.events.splice(0, this.events.length);
           for (const [key, value] of Object.entries(response.data)) {
             this.events.push({
@@ -182,13 +195,16 @@ export default {
               color: "teal",
             });
           }
-        })
-        .then(() => {
           // Progress Bar
           this.setProgressIndicatorVisibility(false);
-          // Progress Bar
-          //  this.$nuxt.$loading.finish()
-        });
+        }
+      );
+      // .then(() => {
+      //   // Progress Bar
+      //   this.setProgressIndicatorVisibility(false);
+      //   // Progress Bar
+      //   //  this.$nuxt.$loading.finish()
+      // });
     },
 
     // Show snapshots list for given year, month, and day
@@ -197,9 +213,9 @@ export default {
       //   "CP#1: this.snapshotList.length : " + this.snapshotList.length
       // );
       nativeEvent.stopPropagation();
-      // Save mouse position
-      this.mousePosX = nativeEvent.clientX;
-      this.mousePosY = nativeEvent.clientY;
+      // // Save mouse position
+      // this.mousePosX = nativeEvent.clientX;
+      // this.mousePosY = nativeEvent.clientY;
 
       this.snapshotList.splice(0, this.snapshotList); // This line cause an error!!I don't know why????
       this.snapshotList = []; // This is correct
@@ -254,11 +270,19 @@ export default {
 
     // Get stored version count for a given url with a given year and a given month per day
     async loadVersionCountDaily(year, month) {
+      // console.log('this.getLinkservRequestURLHub["versionCountsDaily"]:');
+      // console.log(
+      //   this.getLinkservRequestURLHub["versionCountsDaily"]
+      //     .replace("{0}", this.targetURLInSSURT)
+      //     .replace("{1}", year)
+      //     .replace("{2}", month)
+      // );
+
       return await this.$axios.get(
-        this.getLinkservRequestURLHub["versionCountDaily"]
-          .replace('{0}', this.targetURLInSSURT)
-          .replace('{1}', year)
-          .replace('{2}', month)
+        this.getLinkservRequestURLHub["versionCountsDaily"]
+          .replace("{0}", this.targetURLInSSURT)
+          .replace("{1}", year)
+          .replace("{2}", month)
       );
     },
 
@@ -267,11 +291,12 @@ export default {
     async loadVersions(year, month, day) {
       return await this.$axios.get(
         this.getLinkservRequestURLHub["versions"]
-        .replace('{0}', this.targetURLInSSURT)
-        .replace('{1}',
-          // `${year}-${month}-${day <= 9 ? "0" : ""}${day}`
-          `${year}${month}${day <= 9 ? "0" : ""}${day}`
-        )
+          .replace("{0}", this.targetURLInSSURT)
+          .replace(
+            "{1}",
+            // `${year}-${month}-${day <= 9 ? "0" : ""}${day}`
+            `${year}${month}${day <= 9 ? "0" : ""}${day}`
+          )
       );
     },
 
