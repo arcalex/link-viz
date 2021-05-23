@@ -51,7 +51,9 @@ const _nodeLabelFormatList = ["short", "long"]  // How to display node label
 const _edgeColorTypeList = ["uniform", "domain name & depth"]
 const _nodeColoringMethodList = ["all", "selected", "selected-node domain", "domain-driven"] // Types of coloring nodes
 
-const _graphLocatorModeOptionList = ["Snapshot Selection in Tree", "View Snapshots in Calendar", "Timeline"]  // Graph locator Mode Options
+// const _graphLocatorModeList = ["Load single", "View Snapshots in Calendar", "Timeline"]  // Graph locator Mode Options
+const _graphLocatorModeList = ["Single snapshot", "Timeline"]  // Graph locator Mode Options
+const _snapshotSelectionModeList = ['Tree', 'Calendar']
 
 
 // Set the following objects to be immutable
@@ -61,7 +63,7 @@ Object.freeze(_nodeShapeList)
 Object.freeze(_nodeLabelFormatList)
 Object.freeze(_edgeColorTypeList)
 Object.freeze(_nodeColoringMethodList)
-Object.freeze(_graphLocatorModeOptionList)
+Object.freeze(_graphLocatorModeList)
 
 
 export const state = () => ({
@@ -93,7 +95,7 @@ export const state = () => ({
 
     // Setting for changing 
     settings: {
-        backgroundColor: { r: 128, g: 128, b: 128, a: 1.0 },  // Background color
+        backgroundColor: { r: 223, g: 223, b: 223, a: 1.0 },  // Background color
 
         nodeSizeTypeList: _nodeSizeTypeList,        // Reference for "_nodeSizeTypeList"
         nodeShapeTypeList: _nodeShapeTypeList,      // Reference for "_nodeShapeTypeList"
@@ -102,7 +104,7 @@ export const state = () => ({
         edgeColorTypeList: _edgeColorTypeList,      // Reference for "_edgeColorTypeList"
         nodeColoringMethodList: _nodeColoringMethodList,    // Reference for "_nodeColoringMethodList"
 
-        graphLocatorModeOptionList: _graphLocatorModeOptionList, // Reference for "_graphLocatorModeOptionList"
+        graphLocatorModeList: _graphLocatorModeList, // Reference for "_graphLocatorModeList"
 
         // Help to change a setting
         coloringAction: {
@@ -183,9 +185,9 @@ export const getters = {
         return state.settings.nodeLabelFormatList
     },
 
-    // Get graph locator mode option list
-    getGraphLocatorModeOptionList(state) {
-        return state.settings.graphLocatorModeOptionList
+    // Get graph locator mode list
+    getGraphLocatorModeList(state) {
+        return state.settings.graphLocatorModeList
     },
 
     // Return "coloringAction"
