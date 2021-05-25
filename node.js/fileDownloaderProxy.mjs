@@ -19,8 +19,8 @@ createServer((req, res) => {
         if (domain) {
             // domain is a non-empty string
             let faviconURL = domain + "/favicon.ico"
-            if (!faviconURL.startsWith("http")) {
-                faviconURL = "http://" + faviconURL
+            if (!faviconURL.startsWith("https")) {
+                faviconURL = "https://" + faviconURL
             }
             try {
                 // Download this favicon
@@ -37,12 +37,6 @@ createServer((req, res) => {
                     console.log('Response error while downloading: ' + error)
                 })
                 downloadStream.pipe(res);
-                // console.log('createServer, post request')
-                console.log('createServer, before res.setHeader')
-                res.setHeader("content-disposition", "attachment; filename=favicon.ico");
-                // request('https://www.google.com/favicon.ico').pipe(res);
-                console.log('createServer, request')
-                got.stream(faviconURL).pipe(res);
                 console.log('createServer, post request')
             } catch (error) {
                 // Let it be internal error
