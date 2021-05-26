@@ -134,6 +134,11 @@ export default {
     linkservHostname: "https://linkapi.bibalex.org/",                               // Hostname of linkserv (given by yid in 23/02/2021)
     waybackBaseURL: "http://web.archive.bibalex.org/web/",                  // Wayback Base URL
     timeBetweenSnaphotDownload: 100,  // Time between snapshots download (for not overwhelming server)
+    // Template for downloading a country flag from website https://www.countryflags.io/
+    //  {0}: country code
+    //  {1}: style (valid values: 'flat' or 'shiny')
+    //  {3}: size (valid sizes: 16, 24, 32, 48, or 64 in px units)
+    countryFlagTemplateAPIURL: "https://www.countryflags.io/{0}/{1}/{2}.png",
     frameTime: 500,
   },
 }
