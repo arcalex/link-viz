@@ -8,7 +8,6 @@
         v-model="mainTab"
         fixed-tabs
         background-color="black"
-        color=""
         dark
       >
         <v-tabs-slider color="yellow"></v-tabs-slider>
@@ -53,7 +52,7 @@
                           methodIndex: 0,
                         })
                       "
-                      ><v-icon large>mdi-alpha</v-icon></v-btn
+                      ><v-icon large class="base-custom-icon color-all-nodes"></v-icon></v-btn
                     >
                   </template>
                   <span
@@ -72,7 +71,7 @@
                           methodIndex: 1,
                         })
                       "
-                      ><v-icon large>mdi-beta</v-icon></v-btn
+                      ><v-icon large class="base-custom-icon color-selected-node"></v-icon></v-btn
                     >
                   </template>
                   <span>Assign Selected color to selected node</span>
@@ -89,7 +88,7 @@
                           methodIndex: 2,
                         })
                       "
-                      ><v-icon large>mdi-gamma</v-icon></v-btn
+                      ><v-icon large class="base-custom-icon color-nodes-in-selected-domain"></v-icon></v-btn
                     >
                   </template>
                   <span
@@ -111,7 +110,7 @@
                           methodIndex: 3,
                         })
                       "
-                      ><v-icon large>mdi-epsilon</v-icon></v-btn
+                      ><v-icon large class="base-custom-icon color-nodes-in-domain-based"></v-icon></v-btn
                     >
                   </template>
                   <span>Apply domain-driven colors</span>
@@ -246,7 +245,6 @@
                 </v-radio-group>
                 <v-color-picker
                   hide-canvas
-                  v-model="color"
                   @update:color="updateEdgeColor"
                   :value="getEdgeColor"
                 >

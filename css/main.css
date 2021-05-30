@@ -52,6 +52,21 @@ html {
   background-image: url('~assets/images/loopFinder.svg');
 }
 
+.color-all-nodes {
+  background-image: url('~assets/images/colorAllNodes.svg');
+}
+
+.color-nodes-in-domain-based {
+  background-image: url('~assets/images/colorNodesInDomainBased.svg');
+}
+
+.color-nodes-in-selected-domain {
+  background-image: url('~assets/images/colorNodesInSelectedDomain.svg');
+}
+
+.color-selected-node {
+  background-image: url('~assets/images/colorSelectedNode.svg');
+}
 
 /* Base attributes for custom icon */
 .base-custom-icon {
