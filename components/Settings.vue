@@ -1,32 +1,41 @@
 <!-- Settings for controlling graph and other options in rendering the graph -->
 <template>
   <!-- <v-dialog v-model="visibility" persistent max-width="290"> -->
-  <div class="main-settings">
-    <v-card>
-      <v-card-title>Settings</v-card-title>
+  <v-navigation-drawer absolute right permanent class="navigation-drawer">
+    <div class="d-flex flex-column main">
+      <v-row no-gutters class="aside-title flex-grow-0">
+        <h4 class="white--text">Settings</h4>
+        <v-spacer></v-spacer>
+        <v-col cols="auto">
+          <v-btn color="white" icon dark x-small @click="hideSettings()">
+            <v-icon>mdi-close</v-icon>
+          </v-btn>
+        </v-col>
+      </v-row>
       <v-tabs
         v-model="mainTab"
         fixed-tabs
         background-color="black"
         dark
+        class="flex-grow-0"
       >
         <v-tabs-slider color="yellow"></v-tabs-slider>
         <v-tab>Nodes</v-tab>
         <v-tab>Edges</v-tab>
         <v-tab>Others</v-tab>
       </v-tabs>
-      <v-tabs-items v-model="mainTab">
+      <v-tabs-items v-model="mainTab" style="overflow-y: auto">
         <!-- -------- -->
         <!-- -------- -->
         <!-- Node Tab -->
         <!-- -------- -->
         <!-- -------- -->
         <v-tab-item>
-          <v-card class="d-flex flex-row flex-wrap justify-center tab-settings">
+          <v-card :disabled="!getLoadedGraphFlag" class="d-flex flex-column">
             <!-- +++++ -->
             <!-- Color -->
             <!-- +++++ -->
-            <v-card shaped elevation="6" width="40%">
+            <v-card flat class="separator">
               <v-card-title>Color</v-card-title>
               <v-card-text>
                 <span>Selected color</span>
@@ -52,8 +61,11 @@
                           methodIndex: 0,
                         })
                       "
-                      ><v-icon large class="base-custom-icon color-all-nodes"></v-icon></v-btn
-                    >
+                      ><v-icon
+                        large
+                        class="base-custom-icon color-all-nodes"
+                      ></v-icon
+                    ></v-btn>
                   </template>
                   <span
                     >Assign Selected color to <strong>ALL</strong> nodes</span
@@ -65,14 +77,18 @@
                       v-on="on"
                       icon
                       color="orange"
+                      :disabled="!getSelectedNodeFlag"
                       @click="
                         setColoringAction({
                           color: nodeColoringMethodColor.rgba,
                           methodIndex: 1,
                         })
                       "
-                      ><v-icon large class="base-custom-icon color-selected-node"></v-icon></v-btn
-                    >
+                      ><v-icon
+                        large
+                        class="base-custom-icon color-selected-node"
+                      ></v-icon
+                    ></v-btn>
                   </template>
                   <span>Assign Selected color to selected node</span>
                 </v-tooltip>
@@ -82,21 +98,24 @@
                       v-on="on"
                       icon
                       color="orange"
+                      :disabled="!getSelectedNodeFlag"
                       @click="
                         setColoringAction({
                           color: nodeColoringMethodColor.rgba,
                           methodIndex: 2,
                         })
                       "
-                      ><v-icon large class="base-custom-icon color-nodes-in-selected-domain"></v-icon></v-btn
-                    >
+                      ><v-icon
+                        large
+                        class="base-custom-icon color-nodes-in-selected-domain"
+                      ></v-icon
+                    ></v-btn>
                   </template>
                   <span
                     >Assign Selected color to nodes belonging to same domain of
                     selected node</span
                   >
                 </v-tooltip>
-                <!-- <v-divider vertical></v-divider> -->
                 <v-spacer></v-spacer>
                 <v-tooltip top>
                   <template v-slot:activator="{ on }">
@@ -110,10 +129,13 @@
                           methodIndex: 3,
                         })
                       "
-                      ><v-icon large class="base-custom-icon color-nodes-in-domain-based"></v-icon></v-btn
-                    >
+                      ><v-icon
+                        large
+                        class="base-custom-icon color-nodes-in-domain-based"
+                      ></v-icon
+                    ></v-btn>
                   </template>
-                  <span>Apply domain-driven colors</span>
+                  <span>Apply domain-driven colors randomly</span>
                 </v-tooltip>
               </v-card-actions>
             </v-card>
@@ -121,73 +143,77 @@
             <!-- +++++ -->
             <!-- Size -->
             <!-- +++++ -->
-            <v-card shaped elevation="6" width="40%">
+            <v-card flat class="separator">
               <v-card-title>Size</v-card-title>
               <v-card-text>
                 <v-radio-group
                   mandatory
                   column
-                  @change="updateNodeSizeType"
-                  v-model="selectedNodeSizeTypeIndex"
+                  @change="updateNodeSizeCalcIndex"
+                  v-model="nodeSizeCalcIndex"
                 >
                   <template v-slot:label>
                     <span><strong>Size type calculation</strong></span>
                   </template>
                   <v-radio
-                    v-for="(type, index) in getNodeSizeTypeList"
-                    :label="type"
-                    :key="index"
-                    :value="index"
+                    v-for="value in getNodeSizeCalcEnum"
+                    :label="getNodeSizeCalcEnumLabel(value)"
+                    :key="value"
+                    :value="value"
                   ></v-radio>
                 </v-radio-group>
-                <v-slider
-                  label="Level"
-                  :min="10"
-                  :max="50"
-                  :step="1"
-                  :value="getLatestUniformNodeSizeUsedValue"
-                  thumb-label="always"
-                  v-if="selectedNodeSizeTypeIndex === 0"
-                  class="mt-4"
-                  @change="updateUniformNodeSize"
-                >
-                </v-slider>
-                <v-range-slider
-                  label="Range"
-                  :min="10"
-                  :max="50"
-                  :value="currentNodeSizeTypeRangeValue"
-                  :step="1"
-                  thumb-label="always"
+                <SpinBox
+                  v-if="nodeSizeCalcIndex === 0"
+                  placeholder="Enter integer value for uniform size"
+                  label="Uniform size"
+                  :min="1"
+                  :initValue="getUniformNodeSize"
+                  :max="100"
+                  @valueReady="updateUniformNodeSize"
+                />
+                <RangeSpinBox
                   v-else
-                  class="mt-4"
-                  @change="UpdateNodeSizeTypeRangeValue"
-                >
-                </v-range-slider>
+                  :min="1"
+                  :max="100"
+                  :initMin="1"
+                  :initMax="100"
+                  minPlaceholder="Minimum Value"
+                  maxPlaceholder="Maximum Value"
+                  minLabel="Minimum Bound"
+                  maxLabel="Maximum Bound"
+                  @valueReady="UpdateNodeSizeCalcRange"
+                />
               </v-card-text>
             </v-card>
 
             <!-- +++++ -->
             <!-- Shape -->
             <!-- +++++ -->
-            <v-card shaped elevation="6" width="40%">
+            <v-card flat class="separator">
               <v-card-title>Shape</v-card-title>
               <v-card-text>
-                <v-radio-group mandatory column @change="updateNodeShapeType">
+                <v-radio-group
+                  mandatory
+                  column
+                  @change="updateNodeShapeCategory"
+                >
                   <span>Shape type selection</span>
                   <v-radio
-                    v-for="(type, index) in getNodeShapeTypeList"
-                    :label="type"
-                    :key="index"
+                    v-for="value in getNodeShapeCategoryEnum"
+                    :label="getNodeShapeCategoryEnumLabel(value)"
+                    :key="value"
                   >
                   </v-radio>
                 </v-radio-group>
                 <v-select
-                  :disabled="getSelectedNodeShapeTypeIndex === 0"
+                  :disabled="
+                    getNodeShapeCategoryCurrentIndex ===
+                    getNodeShapeCategoryEnum.favicon
+                  "
                   label="Node shape"
                   :items="getNodeShapeList"
                   @change="updateNodeShape"
-                  :value="getNodeShapeList[getSelectedNodeShapeIndex]"
+                  :value="getNodeShapeList[getNodeShapeCurrentIndex]"
                 ></v-select>
               </v-card-text>
             </v-card>
@@ -195,23 +221,23 @@
             <!-- +++++++++++++ -->
             <!-- Miscellaneous -->
             <!-- +++++++++++++ -->
-            <v-card shaped elevation="6" width="40%">
+            <v-card flat>
               <v-card-title>Miscellaneous</v-card-title>
               <v-card-text>
                 <v-radio-group
                   mandatory
                   column
-                  @change="setSelectedNodeLabelFormatIndex"
+                  @change="setNodeLabelFormatCurrentIndex"
                   v-model="selectedNodeLabelFormatIndex"
                 >
                   <template v-slot:label>
                     <div>Node Label Format</div>
                   </template>
                   <v-radio
-                    v-for="(type, index) in getNodeLabelFormatList"
-                    :label="type"
-                    :key="index"
-                    :value="index"
+                    v-for="value in getNodeLabelFormatEnum"
+                    :label="getNodeLabelFormatEnumLabel(value)"
+                    :key="value"
+                    :value="value"
                   ></v-radio>
                 </v-radio-group>
               </v-card-text>
@@ -225,21 +251,23 @@
         <!-- -------- -->
         <!-- -------- -->
         <v-tab-item>
-          <v-card class="d-flex flex-row flex-wrap justify-center tab-settings">
-            <v-card shaped elevation="6" width="40%">
+          <!-- <v-card :disabled="!getLoadedGraphFlag" class="d-flex flex-column"> -->
+          <!-- For now, let it be disabled all the time-->
+          <v-card :disabled="true" class="d-flex flex-column">
+            <v-card flat>
               <v-card-title>Color</v-card-title>
               <v-card-text>
                 <v-radio-group
                   mandatory
                   column
-                  @change="setSelectedEdgeColorTypeIndex"
+                  @change="setEdgeColoringMethodCurrentIndex"
                   v-model="selectedEdgeColorTypeIndex"
                 >
                   <span>Edge color method</span>
                   <v-radio
-                    v-for="(type, index) in getEdgeColorTypeList"
-                    :label="type"
-                    :key="index"
+                    v-for="value in getEdgeColoringMethodEnum"
+                    :label="getEdgeColoringMethodEnumLabel(value)"
+                    :key="value"
                   >
                   </v-radio>
                 </v-radio-group>
@@ -266,11 +294,9 @@
         <!-- ---------- -->
         <!-- ---------- -->
         <v-tab-item>
-          <v-card class="d-flex flex-row flex-wrap justify-center tab-settings">
-            <v-card shaped elevation="6" width="40%">
+          <v-card class="d-flex flex-column">
+            <v-card flat>
               <v-card-title>Background Color</v-card-title>
-              <!-- Background Color -->
-              <!-- <v-chip label large outlined>Background Color</v-chip> -->
               <v-card-text>
                 <v-color-picker
                   hide-mode-switch
@@ -284,16 +310,10 @@
           </v-card>
         </v-tab-item>
       </v-tabs-items>
-
-      <v-card-actions>
-        <v-spacer></v-spacer>
-        <v-btn color="red" text @click="closeDialog()">Close</v-btn>
-        <v-spacer></v-spacer>
-      </v-card-actions>
-    </v-card>
-  </div>
-  <!-- </v-dialog> -->
+    </div>
+  </v-navigation-drawer>
 </template>
+
 <script>
 /**
  *
@@ -322,14 +342,20 @@
  * Settings Customization UI widget
  */
 import { mapActions, mapGetters } from "vuex";
+import SpinBox from "@/components/SpinBox.vue";
+import RangeSpinBox from "@/components/RangeSpinBox.vue";
 
 export default {
+  components: {
+    SpinBox,
+    RangeSpinBox,
+  },
   data() {
     return {
       mainTab: null,
       selectedEdgeColorTypeIndex: 0,
       selectedNodeColorTypeIndex: 0,
-      selectedNodeSizeTypeIndex: 0,
+      nodeSizeCalcIndex: 0,
       nodeColoringMethodColor: {},
       selectedNodeLabelFormatIndex: 0,
     };
@@ -337,86 +363,47 @@ export default {
 
   computed: {
     ...mapGetters({
-      // getLinkservRequestURLHub: "getLinkservRequestURLHub",
+      getNodeSizeCalcEnum: "getNodeSizeCalcEnum",
       getBackgroundColor: "getBackgroundColor",
-      getNodeSizeTypeList: "getNodeSizeTypeList",
-      // getNodeColorTypeList: "getNodeColorTypeList",
-      getNodeShapeTypeList: "getNodeShapeTypeList",
+      getNodeShapeCategoryEnum: "getNodeShapeCategoryEnum",
       getNodeShapeList: "getNodeShapeList",
-      getEdgeColorTypeList: "getEdgeColorTypeList",
-      getNodeLabelFormatList: "getNodeLabelFormatList",
+      getEdgeColoringMethodEnum: "getEdgeColoringMethodEnum",
+      getNodeLabelFormatEnum: "getNodeLabelFormatEnum",
       getNodeUniformColor: "getNodeUniformColor",
       getEdgeColor: "getEdgeColor",
-      getNodeColoringMethodList: "getNodeColoringMethodList",
-      getSelectedNodeSizeTypeIndex: "getSelectedNodeSizeTypeIndex",
-      getSelectedNodeLabelFormatIndex: "getSelectedNodeLabelFormatIndex",
-      getSelectedNodeShapeTypeIndex: "getSelectedNodeShapeTypeIndex",
-      getSelectedNodeShapeIndex: "getSelectedNodeShapeIndex",
-
-      // TODO: Try to rename them in the future
-      getLatestUniformNodeSizeUsedValue: "getLatestUniformNodeSizeUsedValue",
-      getLatestFileSizeBasedNodeSizeValue:
-        "getLatestFileSizeBasedNodeSizeValue",
-      getLatestInlinkCountBasedNodeSizeValue:
-        "getLatestInlinkCountBasedNodeSizeValue",
-      getLatestOutlinkCountBasedNodeSizeValue:
-        "getLatestOutlinkCountBasedNodeSizeValue",
-      // TODO: Later
-      // getNodeSizeValidRange: "getNodeSizeValidRange"
+      getNodeColoringMethodEnum: "getNodeColoringMethodEnum",
+      getNodeSizeCalcCurrentIndex: "getNodeSizeCalcCurrentIndex",
+      getNodeLabelFormatCurrentIndex: "getNodeLabelFormatCurrentIndex",
+      getNodeShapeCategoryCurrentIndex: "getNodeShapeCategoryCurrentIndex",
+      getNodeShapeCurrentIndex: "getNodeShapeCurrentIndex",
+      getUniformNodeSize: "getUniformNodeSize",
+      getInlinkNodeSizeRange: "getInlinkNodeSizeRange",
+      getOutlinkNodeSizeRange: "getOutlinkNodeSizeRange",
+      getLoadedGraphFlag: "getLoadedGraphFlag",
+      getSelectedNodeFlag: "getSelectedNodeFlag",
     }),
-
-    currentNodeSizeTypeRangeValue() {
-      switch (this.getSelectedNodeSizeTypeIndex) {
-        case 1:
-          // File-size based
-          return this.getLatestFileSizeBasedNodeSizeValue;
-          break;
-
-        case 2:
-          // Inlink-count based
-          return this.getLatestInlinkCountBasedNodeSizeValue;
-          break;
-
-        case 3:
-          // Outlink-count based
-          return this.getLatestOutlinkCountBasedNodeSizeValue;
-          break;
-
-        default:
-          // uniform selected => return []
-          return [];
-          break;
-      }
-    },
   },
 
   methods: {
     ...mapActions({
       setBackgroundColor: "setBackgroundColor",
-      setSelectedNodeSizeTypeIndex: "setSelectedNodeSizeTypeIndex",
-      // setSelectedNodeColorTypeIndex: "setSelectedNodeColorTypeIndex",
-      setSelectedNodeShapeTypeIndex: "setSelectedNodeShapeTypeIndex",
-      setSelectedNodeShapeIndex: "setSelectedNodeShapeIndex",
-      setSelectedEdgeColorTypeIndex: "setSelectedEdgeColorTypeIndex",
-      setSelectedNodeLabelFormatIndex: "setSelectedNodeLabelFormatIndex",
+      setNodeSizeCalcCurrentIndex: "setNodeSizeCalcCurrentIndex",
+      setNodeShapeCategoryCurrentIndex: "setNodeShapeCategoryCurrentIndex",
+      setNodeShapeCurrentIndex: "setNodeShapeCurrentIndex",
+      setEdgeColoringMethodCurrentIndex: "setEdgeColoringMethodCurrentIndex",
+      setNodeLabelFormatCurrentIndex: "setNodeLabelFormatCurrentIndex",
       setNodeUniformColor: "setNodeUniformColor",
       setColoringAction: "setColoringAction",
       setEdgeColor: "setEdgeColor",
-      // setLinkservRequestURLHub: "setLinkservRequestURLHub",
-      // setProgressIndicatorVisibility: "setProgressIndicatorVisibility",
-      setLatestUniformNodeSizeUsedValue: "setLatestUniformNodeSizeUsedValue",
-      setLatestFileSizeBasedNodeSizeValue:
-        "setLatestFileSizeBasedNodeSizeValue",
-      setLatestInlinkCountBasedNodeSizeValue:
-        "setLatestInlinkCountBasedNodeSizeValue",
-      setLatestOutlinkCountBasedNodeSizeValue:
-        "setLatestOutlinkCountBasedNodeSizeValue",
+      setUniformNodeSize: "setUniformNodeSize",
+      setInlinkNodeSizeRange: "setInlinkNodeSizeRange",
+      setOutlinkNodeSizeRange: "setOutlinkNodeSizeRange",
       setUseDifferentStyleForExtEdges: "setUseDifferentStyleForExtEdges",
     }),
 
     // Close the dialog settings
-    closeDialog() {
-      this.$emit("onClose");
+    hideSettings() {
+      this.$emit("hideSettings");
     },
 
     // Update background color
@@ -425,14 +412,16 @@ export default {
     },
 
     // Update Node Size Type
-    updateNodeSizeType(index) {
-      this.setSelectedNodeSizeTypeIndex(index); // Update index
+    updateNodeSizeCalcIndex(index) {
+      // this.setSelectedNodeSizeTypeIndex(index); // Update index
+      this.setNodeSizeCalcCurrentIndex(index); // Update index
     },
 
     // Update Uniform Node Size after changing with slider
     updateUniformNodeSize(value) {
       // console.log("Inside updateUniformNodeSize, value = " + value);
-      this.setLatestUniformNodeSizeUsedValue(value);
+      // this.setLatestUniformNodeSizeUsedValue(value);
+      this.setUniformNodeSize(value);
     },
 
     // Update Edge Color
@@ -440,22 +429,16 @@ export default {
       this.setEdgeColor(color.hsla);
     },
     // Update Range Values for selected ranged node size Type
-    UpdateNodeSizeTypeRangeValue(rangedValue) {
-      console.log("Inside UpdateNodeSizeTypeRangeValue " + rangedValue);
-      switch (this.getSelectedNodeSizeTypeIndex) {
-        case 1:
-          // File-size based
-          this.setLatestFileSizeBasedNodeSizeValue(rangedValue);
-          break;
-
-        case 2:
+    UpdateNodeSizeCalcRange(rangedValue) {
+      switch (this.getNodeSizeCalcCurrentIndex) {
+        case this.getNodeSizeCalcEnum.inlinkCount:
           // Inlink-count based
-          this.setLatestInlinkCountBasedNodeSizeValue(rangedValue);
+          this.setInlinkNodeSizeRange(rangedValue);
           break;
 
-        case 3:
+        case this.getNodeSizeCalcEnum.outlinkCount:
           // Outlink-count based
-          this.setLatestOutlinkCountBasedNodeSizeValue(rangedValue);
+          this.setOutlinkNodeSizeRange(rangedValue);
           break;
 
         default:
@@ -470,30 +453,130 @@ export default {
     },
 
     updateNodeShape(selected) {
-      this.setSelectedNodeShapeIndex(this.getNodeShapeList.indexOf(selected));
+      this.setNodeShapeCurrentIndex(this.getNodeShapeList.indexOf(selected));
     },
 
     // Update Node Shape Type
-    updateNodeShapeType(index) {
-      this.setSelectedNodeShapeTypeIndex(index); // Update index
+    // updateNodeShapeType(index) {
+    updateNodeShapeCategory(index) {
+      // this.setSelectedNodeShapeTypeIndex(index); // Update index
+      this.setNodeShapeCategoryCurrentIndex(index); // Update index
+    },
+
+    // Return the label
+    getNodeSizeCalcEnumLabel(value) {
+      let label = "";
+      switch (value) {
+        case this.getNodeSizeCalcEnum.uniform:
+          label = "Uniform";
+          break;
+
+        case this.getNodeSizeCalcEnum.inlinkCount:
+          label = "Inlink Count";
+          break;
+
+        case this.getNodeSizeCalcEnum.outlinkCount:
+          label = "Outlink Count";
+          break;
+
+        default:
+          // NEVER reach this point!!
+          label = "UNDEFINED";
+          break;
+      }
+      return label;
+    },
+
+    // Return the label
+    getNodeShapeCategoryEnumLabel(value) {
+      let label = "";
+      switch (value) {
+        case this.getNodeShapeCategoryEnum.favicon:
+          label = "Favicon";
+          break;
+
+        case this.getNodeShapeCategoryEnum.geometric:
+          label = "Geometric";
+          break;
+
+        default:
+          // NEVER reach this point!!
+          label = "UNDEFINED";
+          break;
+      }
+      return label;
+    },
+
+    // Return the label
+    getNodeLabelFormatEnumLabel(value) {
+      let label = "";
+      switch (value) {
+        case this.getNodeLabelFormatEnum.short:
+          label = "short";
+          break;
+
+        case this.getNodeLabelFormatEnum.long:
+          label = "long";
+          break;
+
+        default:
+          // NEVER reach this point!!
+          label = "UNDEFINED";
+          break;
+      }
+      return label;
+    },
+
+    // Return the label
+    getEdgeColoringMethodEnumLabel(value) {
+      let label = "";
+      switch (value) {
+        case this.getEdgeColoringMethodEnum.uniform:
+          label = "short";
+          break;
+
+        case this.getEdgeColoringMethodEnum.domainNameAndDepth:
+          label = "long";
+          break;
+
+        default:
+          // NEVER reach this point!!
+          label = "UNDEFINED";
+          break;
+      }
+      return label;
     },
   },
 
   mounted() {
-    this.selectedNodeLabelFormatIndex = this.getSelectedNodeLabelFormatIndex;
+    this.selectedNodeLabelFormatIndex = this.getNodeLabelFormatCurrentIndex;
+    this.nodeSizeCalcIndex = this.getNodeSizeCalcCurrentIndex;
   },
 };
 </script>
 
 <style scoped>
-.main-settings {
-  height: 30%;
-  max-height: 30%;
-  overflow: auto;
+.separator {
+  border-bottom: 1px solid lightgray;
+}
+
+.aside-title {
+  background-color: rgba(0, 0, 0, 0.5);
+  padding: 15px;
+  margin-bottom: 15px;
+  border-bottom: 1px dotted lightgray;
+}
+
+.main {
+  height: 100%;
 }
 
 .tab-settings {
   overflow-y: auto;
-  height: 500px;
+  /* height: 500px; */
+}
+
+.navigation-drawer {
+  z-index: 3;
 }
 </style>

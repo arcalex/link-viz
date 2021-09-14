@@ -4,7 +4,7 @@ import got from "got";
 import URL from 'url'
 
 const listeningPort = 8080
-const downloadTimeout = 2500
+const downloadTimeout = 4000
 createServer((req, res) => {
     req.on('error', (err) => {
         // Error in request

@@ -1,43 +1,46 @@
 <template>
-  <!-- The outer div is needed for letting v-show work -->
   <div class="root-graph-timeline-div">
     <div class="inner-graph-timeline-div d-flex justify-center flex-row">
-      <!-- <div class="inner-graph-timeline-div d-flex flex-row flex-wrap"> -->
-      <!-- This is a test values -->
-      <!-- <v-row class="d-flex justify-center flex-grow-0 flex-shrink-1" no-gutters> -->
-      <!-- <v-slider min="1" max="5" dense> </v-slider> -->
-      <!-- </v-row> -->
-      <!-- <v-row class="d-flex justify-center" no-gutters> -->
-      <!-- <v-btn-toggle group> -->
-      <v-btn icon @click="doAnimationAction"
-        ><v-icon>{{
-          animationAction === "ready"
-            ? "mdi-animation-play-outline"
-            : "mdi-pause-circle-outlinez`"
-        }}</v-icon></v-btn
-      >
-      <v-btn icon @click="toggleRepeat"
-        ><v-icon>{{
-          repeat === true ? "mdi-repeat" : "mdi-repeat-off"
-        }}</v-icon></v-btn
-      >
+      <v-tooltip top>
+        <template v-slot:activator="{ on }">
+          <v-btn v-on="on" icon @click="doAnimationAction"
+            ><v-icon>{{
+              animationAction === "ready"
+                ? "mdi-animation-play-outline"
+                : "mdi-pause-circle-outline"
+            }}</v-icon></v-btn
+          >
+        </template>
+        <span>{{
+          animationAction === "ready" ? "Play animation" : "Pause animation"
+        }}</span>
+      </v-tooltip>
+      <v-tooltip top>
+        <template v-slot:activator="{ on }">
+          <v-btn v-on="on" icon @click="toggleRepeat"
+            ><v-icon>{{
+              repeat === true ? "mdi-repeat" : "mdi-repeat-off"
+            }}</v-icon></v-btn
+          >
+        </template>
+        <span>{{ repeat === true ? "Repeat is on" : "Repeat is off" }}</span>
+      </v-tooltip>
       <v-slider
+        color="#CE7330"
         :min="sliderMinVal"
         :max="sliderMaxVal"
         :value="sliderCurVal"
+        :readonly="animationAction === 'playing' ? true : false"
         dense
         ticks="always"
         tick-size="4"
         class="timelineSlider"
+        @change="updateTimeline"
       >
         <template v-slot:thumb-label="{ value }">
           {{ value }}
         </template>
       </v-slider>
-      <!-- <v-btn icon @click="pauseAnimation"><v-icon>mdi-pause</v-icon></v-btn> -->
-      <!-- </v-btn-toggle> -->
-      <!-- </v-row> -->
-      <!-- </div> -->
     </div>
   </div>
 </template>
@@ -79,7 +82,7 @@ export default {
       required: true,
       default: "ready", // valid values: 'ready', 'playing'
     },
-    // tick label List 
+    // tick label List
     // tickLabelList: {
     //   type: Array,
     //   required: true,
@@ -108,18 +111,14 @@ export default {
   methods: {
     // Play animation from current progress bar
     doAnimationAction() {
-      // switch (this.state) {
-      // switch (this.currentAnimationAction) {
       switch (this.animationAction) {
         // if 'ready', then put in 'playing' and play animation
         case "ready":
-          // this.currentAnimationAction = "playing";
           this.$emit("doAnimationAction", "play");
           break;
 
         // if 'playing', then put in 'ready' and stop animation
         case "playing":
-          // this.currentAnimationAction = "ready";
           this.$emit("doAnimationAction", "pause");
         default:
           break;
@@ -127,7 +126,12 @@ export default {
     },
     toggleRepeat() {
       this.repeat = !this.repeat;
+      console.log("toggleRepeat, this.repeat = " + this.repeat);
       this.$emit("toggleRepeat", this.repeat);
+    },
+    // Update timelime if user moves the slider
+    updateTimeline(value) {
+      this.$emit("updateCurVal", value);
     },
     // Pause animation if playing
     // pauseAnimation() {},
@@ -148,11 +152,14 @@ export default {
   /* position: absolute; */
   /* width: 20%; */
   /* Important for alpha to be transparent */
-  background-color: rgba(0, 0, 0, 0);
+  background-color: #646464;
   /* z-index: 2; */
 }
 
 .timelineSlider {
   min-width: 150px;
+}
+.v-slider__tick-label {
+    transform: rotate(-45deg) translate(-22px,-15px) !important;
 }
 </style>

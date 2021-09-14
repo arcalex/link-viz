@@ -20,51 +20,45 @@
  *
  *
  */
-
-const _nodeSizeTypeList = ["uniform", "inlink-count based", "outlink-count based"]
-const _nodeShapeTypeList = ["FAV icon", "geometric"]
-const _nodeShapeList = ["ellipse",
-    "triangle",
-    "round-triangle",
-    "rectangle",
-    "round-rectangle",
-    "bottom-round-rectangle",
-    "cut-rectangle",
-    "barrel",
-    "rhomboid",
-    "diamond",
-    "round-diamond",
-    "pentagon",
-    "round-pentagon",
-    "hexagon",
-    "round-hexagon",
-    "concave-hexagon",
-    "heptagon",
-    "round-heptagon",
-    "octagon",
-    "round-octagon",
-    "star",
-    "tag",
-    "round-tag",
-    "vee"]
-const _nodeLabelFormatList = ["short", "long"]  // How to display node label
-const _edgeColorTypeList = ["uniform", "domain name & depth"]
-const _nodeColoringMethodList = ["all", "selected", "selected-node domain", "domain-driven"] // Types of coloring nodes
-
-// const _graphLocatorModeList = ["Load single", "View Snapshots in Calendar", "Timeline"]  // Graph locator Mode Options
-const _graphLocatorModeList = ["Single snapshot", "Timeline"]  // Graph locator Mode Options
-const _snapshotSelectionModeList = ['Tree', 'Calendar']
-
+// TODO:  rename it to _nodeSizeCalcList
+const _nodeSizeCalcEnum = { uniform: 0, inlinkCount: 1, outlinkCount: 2 }
+const _nodeShapeCategoryEnum = { favicon: 0, geometric: 1 }
+const _nodeShapeList =
+    ["ellipse",
+        "triangle",
+        "round-triangle",
+        "rectangle",
+        "round-rectangle",
+        "bottom-round-rectangle",
+        "cut-rectangle",
+        "barrel",
+        "rhomboid",
+        "diamond",
+        "round-diamond",
+        "pentagon",
+        "round-pentagon",
+        "hexagon",
+        "round-hexagon",
+        "concave-hexagon",
+        "heptagon",
+        "round-heptagon",
+        "octagon",
+        "round-octagon",
+        "star",
+        "tag",
+        "round-tag",
+        "vee"]
+const _nodeLabelFormatEnum = { short: 0, long: 1 }  // How to display node label
+const _edgeColoringMethodEnum = { uniform: 0, domainNameAndDepth: 1 }
+const _nodeColoringMethodEnum = { all: 0, selected: 1, selectedNodeDomain: 2, domainDriven: 3 } // Types of coloring nodes
 
 // Set the following objects to be immutable
-Object.freeze(_nodeSizeTypeList)
-Object.freeze(_nodeShapeTypeList)
+Object.freeze(_nodeSizeCalcEnum)
+Object.freeze(_nodeShapeCategoryEnum)
 Object.freeze(_nodeShapeList)
-Object.freeze(_nodeLabelFormatList)
-Object.freeze(_edgeColorTypeList)
-Object.freeze(_nodeColoringMethodList)
-Object.freeze(_graphLocatorModeList)
-
+Object.freeze(_nodeLabelFormatEnum)
+Object.freeze(_edgeColoringMethodEnum)
+Object.freeze(_nodeColoringMethodEnum)
 
 export const state = () => ({
     // Hold URLs for accessing linkserv
@@ -77,19 +71,28 @@ export const state = () => ({
         versions: ""
     },
 
-    // linkservHostname: undefined, // Store link-serv hostname
-
     // Progress Indicator
     progressIndicatorVisibility: false,
     progressIndicatorMessage: "",
 
 
+    requestNodeIDList: [],    // request node ID List that will be set to get their node data
+    responseNodeDataList: [],  // response node data that will be set after setting "requestNodeID"
+
+    // State indicator that a valid graph is loadeds
+    loadedGraphFlag: false,
+
+    // State indicator that a node is selected
+    selectedNodeFlag: false,
+
     // Finders
     finders: {
         pathFinder: {
-            source: null,       // Source Node
-            target: null,       // Target Node
-            result: null,       // Holds the result of finding path
+            source: null,           // Source Node
+            target: null,           // Target Node
+            result: null,           // Holds the result of finding path (make a survey if it's still needed)
+            // message: '',            // Message to displayed in the alert
+            messageType: 'info',    // valid values: 'success', 'info', 'warning'
         },
     },
 
@@ -97,19 +100,17 @@ export const state = () => ({
     settings: {
         backgroundColor: { r: 223, g: 223, b: 223, a: 1.0 },  // Background color
 
-        nodeSizeTypeList: _nodeSizeTypeList,        // Reference for "_nodeSizeTypeList"
-        nodeShapeTypeList: _nodeShapeTypeList,      // Reference for "_nodeShapeTypeList"
+        nodeSizeCalcEnum: _nodeSizeCalcEnum,        // Reference for "_nodeSizeCalcEnum"
+        nodeShapeCategoryEnum: _nodeShapeCategoryEnum,      // Reference for "_nodeShapeCategoryEnum"
         nodeShapeList: _nodeShapeList,              // Reference for "_nodeShapeList"
-        nodeLabelFormatList: _nodeLabelFormatList,  // Reference for "_nodeLabelFormatList"
-        edgeColorTypeList: _edgeColorTypeList,      // Reference for "_edgeColorTypeList"
-        nodeColoringMethodList: _nodeColoringMethodList,    // Reference for "_nodeColoringMethodList"
-
-        graphLocatorModeList: _graphLocatorModeList, // Reference for "_graphLocatorModeList"
+        nodeLabelFormatEnum: _nodeLabelFormatEnum,  // Reference for "_nodeLabelFormatEnum"
+        edgeColoringMethodEnum: _edgeColoringMethodEnum,      // Reference for "_edgeColoringMethodEnum"
+        nodeColoringMethodEnum: _nodeColoringMethodEnum,    // Reference for "_nodeColoringMethodEnum"
 
         // Help to change a setting
         coloringAction: {
             color: { r: 255, g: 255, b: 255, a: 1.0 },        // color object either rgba or hsla according to type
-            methodIndex: 0,  // index refering to "nodeColoringMethodList"
+            methodIndex: 0,  // index refering to "nodeColoringMethodEnum"
         },
 
         uniformNodeColor: { r: 255, g: 255, b: 255, a: 1.0 },  // uniform node color initially set initially and set by user 
@@ -118,183 +119,132 @@ export const state = () => ({
         edgeColor: { h: 232.71, s: 0.08, l: 0.39, a: 1 },   // Edge color (either for uniform method or domain name and depth)
         useDifferentStyleForExtEdges: false,        // Apply different style (will be white color and dashed lines for external edge(s))
 
-        selectedNodeSizeTypeIndex: 0,               // Selected Node Size Type Index
-        selectedNodeShapeTypeIndex: 0,              // Selected Node Shape Type Index
-        selectedNodeShapeIndex: 0,                  // Selected Node Shape Index
-        selectedNodeLabelFormatIndex: 0,            // Selected Node Label Format Index 
-        selectedEdgeColorTypeIndex: 0,              // Selected Edge Color Type Index
+        nodeSizeCalcCurrentIndex: 0,                // Current Index of node-size calculation
+        nodeShapeCategoryCurrentIndex:0,            // Current Index of node-shape category
+        nodeShapeCurrentIndex: 0,                   // Current index of node shape
+        nodeLabelFormatCurrentIndex:0,
+        edgeColoringMethodCurrentIndex: 0,          // Edge Coloring Method current index
 
-        // TODO: Try to re-organize variables names
-        latestUniformNodeSizeUsedValue: 30,
-        latestFileSizeBasedNodeSizeValue: [20, 40],
-        latestInlinkCountBasedNodeSizeValue: [20, 40],
-        latestOutlinkCountBasedNodeSizeValue: [20, 40],
+        uniformNodeSize: 30,
+        inlinkNodeSizeRange: [20, 40],      // Node Size Range for mapping inlink-count based of nodes
+        outlinkNodeSizeRange: [20, 40],     // Node Size Range for mapping outlink-count based of nodes
 
     }
 })
 
 // Getters
 export const getters = {
-    // Return 'linkservRequestURLHub'
+    getLoadedGraphFlag(state) {
+        return state.loadedGraphFlag
+    },
+    getSelectedNodeFlag(state) {
+        return state.selectedNodeFlag
+    },
     getLinkservRequestURLHub(state) {
         return state.linkservRequestURLHub
     },
-
-    // Return the state of progress indicator visibility
     getProgressIndicatorVisibility(state) {
         return state.progressIndicatorVisibility
     },
-
-    // Return the state of the progress indicator message
+    getRequestNodeIDList(state) {
+        return state.requestNodeIDList
+    },
+    getResponseNodeDataList(state) {
+        return state.responseNodeDataList
+    },
     getProgressIndicatorMessage(state) {
         return state.progressIndicatorMessage
     },
-
-    // Get background color
     getBackgroundColor(state) {
         return state.settings.backgroundColor
     },
-
-    // Return node size type list
-    getNodeSizeTypeList(state) {
-        return state.settings.nodeSizeTypeList
+    getNodeSizeCalcEnum(state) {
+        return state.settings.nodeSizeCalcEnum
     },
-
-    // Get node shape type list
-    getNodeShapeTypeList(state) {
-        return state.settings.nodeShapeTypeList
+    getNodeShapeCategoryEnum(state) {
+        return state.settings.nodeShapeCategoryEnum
     },
-
-    // Get node shape list
     getNodeShapeList(state) {
         return state.settings.nodeShapeList
     },
-
-    // Get edge color type list
-    getEdgeColorTypeList(state) {
-        return state.settings.edgeColorTypeList
+    getEdgeColoringMethodEnum(state) {
+        return state.settings.edgeColoringMethodEnum
     },
-
-    // Get node coloring method
-    getNodeColoringMethodList(state) {
-        return state.settings.nodeColoringMethodList
+    getNodeColoringMethodEnum(state) {
+        return state.settings.nodeColoringMethodEnum
     },
-
-    // get node label format list
-    getNodeLabelFormatList(state) {
-        return state.settings.nodeLabelFormatList
+    getNodeLabelFormatEnum(state) {
+        return state.settings.nodeLabelFormatEnum
     },
-
-    // Get graph locator mode list
-    getGraphLocatorModeList(state) {
-        return state.settings.graphLocatorModeList
-    },
-
-    // Return "coloringAction"
     getColoringAction(state) {
         return state.settings.coloringAction
     },
-
-    // Get selected node size type index
-    getSelectedNodeSizeTypeIndex(state) {
-        return state.settings.selectedNodeSizeTypeIndex
+    getNodeSizeCalcCurrentIndex(state) {
+        return state.settings.nodeSizeCalcCurrentIndex
     },
-
-    // Get selected node shape type index
-    getSelectedNodeShapeTypeIndex(state) {
-        return state.settings.selectedNodeShapeTypeIndex
+    getNodeShapeCategoryCurrentIndex(state) {
+        return state.settings.nodeShapeCategoryCurrentIndex
     },
-
-    // Get selected node shape index
-    getSelectedNodeShapeIndex(state) {
-        return state.settings.selectedNodeShapeIndex
+    getNodeShapeCurrentIndex(state) {
+        return state.settings.nodeShapeCurrentIndex
     },
-
-    // Get selected edge color type index
-    getSelectedEdgeColorTypeIndex(state) {
-        return state.settings.selectedEdgeColorTypeIndex
+    getEdgeColoringMethodCurrentIndex(state) {
+        return state.settings.edgeColoringMethodCurrentIndex
     },
-
-    // Get selected node label format index
-    getSelectedNodeLabelFormatIndex(state) {
-        return state.settings.selectedNodeLabelFormatIndex
+    getNodeLabelFormatCurrentIndex(state) {
+        return state.settings.nodeLabelFormatCurrentIndex
     },
-
-    // Get uniform node color
     getUniformNodeColor(state) {
         return state.settings.uniformNodeColor
     },
-
-    // Get domain color
     getDomainColor(state) {
         return state.settings.domainColor
     },
-
-    // Get edge color
     getEdgeColor(state) {
         return state.settings.edgeColor
     },
-
-    // Get 'useDifferentStyleForExtEdges'
     getUseDifferentStyleForExtEdges(state) {
         return state.settings.useDifferentStyleForExtEdges
     },
-
-    // TODO: Try to re-organize variables names
-    getLatestUniformNodeSizeUsedValue(state) {
-        return state.settings.latestUniformNodeSizeUsedValue
+    getUniformNodeSize(state) {
+        return state.settings.uniformNodeSize
     },
-
-    getLatestFileSizeBasedNodeSizeValue(state) {
-        return state.settings.latestFileSizeBasedNodeSizeValue
+    getInlinkNodeSizeRange(state) {
+        return state.settings.inlinkNodeSizeRange
     },
-
-    getLatestInlinkCountBasedNodeSizeValue(state) {
-        return state.settings.latestInlinkCountBasedNodeSizeValue
+    getOutlinkNodeSizeRange(state) {
+        return state.settings.outlinkNodeSizeRange
     },
-
-    getLatestOutlinkCountBasedNodeSizeValue(state) {
-        return state.settings.latestOutlinkCountBasedNodeSizeValue
-    },
-
     getPathFinderSource(state) {
         return state.finders.pathFinder.source
     },
-
     getPathFinderTarget(state) {
         return state.finders.pathFinder.target
     },
-
     getPathFinderResult(state) {
         return state.finders.pathFinder.result
+    },
+    getPathFinderMessageType(state) {
+        return state.finders.pathFinder.messageType
     }
 }
 
-// Mutations for state this.$config.linkservHostname
+// Mutations for state
 export const mutations = {
-    // setLinkservRequestURLHub(state, { /*ssurtURL = undefined,*/ linkservHostname }) {
+    setLoadedGraphFlag(state, loadedGraphFlag) {
+        state.loadedGraphFlag = loadedGraphFlag
+    },
+    setSelectedNodeFlag(state, selectedNodeFlag) {
+        state.selectedNodeFlag = selectedNodeFlag
+    },
     setLinkservRequestURLHub(state, linkservHostname) {
-        // // Initialize only if supplied
-        // if (linkservHostname) {
-        //     state.linkservHostname = linkservHostname
-        // }
-        // Initialize for getting the proper URL
-        // if (ssurtURL) {
-        // state.linkservRequestURLHub["graph"] = state.linkservHostname + '?' + 'operation=getGraph&identifier=' + ssurtURL + '&timestamp={0}&depth={1}'
-        // state.linkservRequestURLHub["latestVersion"] = state.linkservHostname + '?' + 'operation=getLatestVersion&identifier=' + ssurtURL
-        // state.linkservRequestURLHub["versionCountsYearly"] = state.linkservHostname + '?' + 'operation=getVersionCountsYearly&identifier=' + ssurtURL
-        // state.linkservRequestURLHub["versionCountsMonthly"] = state.linkservHostname + '?' + 'operation=getVersionCountsMonthly&identifier=' + ssurtURL + '&year={0}'
-        // state.linkservRequestURLHub["versionCountsDaily"] = state.linkservHostname + '?' + 'operation=getVersionCountsDaily&identifier=' + ssurtURL + '&year={0}&month={1}'
-        // state.linkservRequestURLHub["versions"] = state.linkservHostname + '?' + 'operation=getVersions&identifier=' + ssurtURL + '&dateTime={0}'
-        // }
-        state.linkservRequestURLHub["graph"] = linkservHostname + '?' + 'operation=getGraph&identifier={0}&timestamp={1}&depth={2}'
+        state.linkservRequestURLHub["graph"] = linkservHostname + '?' + 'operation=getGraph&identifier={0}&timestamp={1}&depth={2}&timeElasticity={3}'
         state.linkservRequestURLHub["latestVersion"] = linkservHostname + '?' + 'operation=getLatestVersion&identifier={0}'
         state.linkservRequestURLHub["versionCountsYearly"] = linkservHostname + '?' + 'operation=getVersionCountsYearly&identifier={0}'
         state.linkservRequestURLHub["versionCountsMonthly"] = linkservHostname + '?' + 'operation=getVersionCountsMonthly&identifier={0}&year={1}'
         state.linkservRequestURLHub["versionCountsDaily"] = linkservHostname + '?' + 'operation=getVersionCountsDaily&identifier={0}&year={1}&month={2}'
         state.linkservRequestURLHub["versions"] = linkservHostname + '?' + 'operation=getVersions&identifier={0}&dateTime={1}'
     },
-
     setProgressIndicatorVisibility(state, progressIndicatorVisibility) {
         state.progressIndicatorVisibility = progressIndicatorVisibility
         // When setting "progressIndicatorVisibility" to false, set the message to be empty
@@ -302,206 +252,152 @@ export const mutations = {
             state.progressIndicatorMessage = ""
         }
     },
-
+    setRequestNodeIDList(state, requestNodeIDList) {
+        state.requestNodeIDList = requestNodeIDList
+    },
+    setResponseNodeDataList(state, responseNodeDataList) {
+        state.responseNodeDataList = responseNodeDataList
+    },
     setProgressIndicatorMessage(state, progressIndicatorMessage) {
         state.progressIndicatorMessage = progressIndicatorMessage
     },
-
-    // Set Background Color
     setBackgroundColor(state, color) {
         state.settings.backgroundColor = color
     },
-
-    // Set selected node size type index
-    setSelectedNodeSizeTypeIndex(state, index) {
-        state.settings.selectedNodeSizeTypeIndex = index
+    setNodeSizeCalcCurrentIndex(state, index) {
+        state.settings.nodeSizeCalcCurrentIndex = index
     },
-
-    // Set selected node shape type index
-    setSelectedNodeShapeTypeIndex(state, index) {
-        state.settings.selectedNodeShapeTypeIndex = index
+    setNodeShapeCategoryCurrentIndex(state, index) {
+        state.settings.nodeShapeCategoryCurrentIndex = index
     },
-
-    // Set selected node shape index
-    setSelectedNodeShapeIndex(state, index) {
-        state.settings.selectedNodeShapeIndex = index
+    setNodeShapeCurrentIndex(state, index) {
+        state.settings.nodeShapeCurrentIndex = index
     },
-
-    // Set selected edge color type index
-    setSelectedEdgeColorTypeIndex(state, index) {
-        state.settings.selectedEdgeColorTypeIndex = index
+    setEdgeColoringMethodCurrentIndex(state, index) {
+        state.settings.edgeColoringMethodCurrentIndex = index
     },
-
-    // Set selected node label format index
-    setSelectedNodeLabelFormatIndex(state, index) {
-        state.settings.selectedNodeLabelFormatIndex = index
+    setNodeLabelFormatCurrentIndex(state, index) {
+        state.settings.nodeLabelFormatCurrentIndex = index
     },
-
-    // Set Node Uniform Color
     setNodeUniformColor(state, color) {
         state.settings.nodeUniformColor = color
     },
-
-    // Set uniform node color
     setUniformNodeColor(state, color) {
         state.settings.uniformNodeColor = color
     },
-
-    // Set domain color
     setDomainColor(state, color) {
         state.settings.domainColor = color
     },
-
-    // Get edge color
     setEdgeColor(state, color) {
         state.settings.edgeColor = color
     },
-
-    // Set 'useDifferentStyleForExtEdges'
     setUseDifferentStyleForExtEdges(state, useDifferentStyleForExtEdges) {
         state.settings.useDifferentStyleForExtEdges = useDifferentStyleForExtEdges
     },
-
-    // Set "coloringAction"
     setColoringAction(state, coloringAction) {
         state.settings.coloringAction = coloringAction
     },
-
-    // TODO: Try to re-organize variables names
-    setLatestUniformNodeSizeUsedValue(state, latestUniformNodeSizeUsedValue) {
-        state.settings.latestUniformNodeSizeUsedValue = latestUniformNodeSizeUsedValue
+    setUniformNodeSize(state, uniformNodeSize) {
+        state.settings.uniformNodeSize = uniformNodeSize
     },
-
-    setLatestFileSizeBasedNodeSizeValue(state, latestFileSizeBasedNodeSizeValue) {
-        state.settings.latestFileSizeBasedNodeSizeValue = latestFileSizeBasedNodeSizeValue
+    setInlinkNodeSizeRange(state, inlinkNodeSizeRange) {
+        state.settings.inlinkNodeSizeRange = inlinkNodeSizeRange
     },
-
-    setLatestInlinkCountBasedNodeSizeValue(state, latestInlinkCountBasedNodeSizeValue) {
-        state.settings.latestInlinkCountBasedNodeSizeValue = latestInlinkCountBasedNodeSizeValue
+    setOutlinkNodeSizeRange(state, outlinkNodeSizeRange) {
+        state.settings.outlinkNodeSizeRange = outlinkNodeSizeRange
     },
-
-    setLatestOutlinkCountBasedNodeSizeValue(state, latestOutlinkCountBasedNodeSizeValue) {
-        state.settings.latestOutlinkCountBasedNodeSizeValue = latestOutlinkCountBasedNodeSizeValue
-    },
-
-    // Set source node for path finder
     setPathFinderSource(state, source) {
         state.finders.pathFinder.source = source
     },
-
-    // Set target node for path finder
     setPathFinderTarget(state, target) {
         state.finders.pathFinder.target = target
     },
-
-    // Set operation result of the path finder
     setPathFinderResult(state, result) {
         state.finders.pathFinder.result = result
+    },
+    setPathFinderMessageType(state, messageType) {
+        state.finders.pathFinder.messageType = messageType
     }
 }
 
 // Actions for changing state
 export const actions = {
+    setLoadedGraphFlag({ state, commit }, loadedGraphFlag) {
+        commit('setLoadedGraphFlag', loadedGraphFlag);
+    },
+    setSelectedNodeFlag({ state, commit }, selectedNodeFlag) {
+        commit('setSelectedNodeFlag', selectedNodeFlag);
+    },
     setLinkservRequestURLHub({ state, commit }, linkservHostname) {
         commit('setLinkservRequestURLHub', linkservHostname);
     },
-
     setProgressIndicatorVisibility({ state, commit }, progressIndicatorVisibility) {
         commit('setProgressIndicatorVisibility', progressIndicatorVisibility)
     },
-
+    setRequestNodeIDList({ state, commit }, requestNodeIDList) {
+        commit('setRequestNodeIDList', requestNodeIDList)
+    },
+    setResponseNodeDataList({ state, commit }, responseNodeDataList) {
+        commit('setResponseNodeDataList', responseNodeDataList)
+    },
     setProgressIndicatorMessage({ state, commit }, progressIndicatorMessage) {
         commit('setProgressIndicatorMessage', progressIndicatorMessage)
     },
-
-    // Set Background Color
     setBackgroundColor({ state, commit }, color) {
         commit('setBackgroundColor', color)
     },
-
-    // Set selected node size type index
-    setSelectedNodeSizeTypeIndex({ state, commit }, index) {
-        commit('setSelectedNodeSizeTypeIndex', index)
+    setNodeSizeCalcCurrentIndex({ state, commit }, index) {
+        commit('setNodeSizeCalcCurrentIndex', index)
     },
-
-    // Set selected node shape type index
-    setSelectedNodeShapeTypeIndex({ state, commit }, index) {
-        commit('setSelectedNodeShapeTypeIndex', index)
+    setNodeShapeCategoryCurrentIndex({ state, commit }, index) {
+        commit('setNodeShapeCategoryCurrentIndex', index)
     },
-
-    // Set selected node shape index
-    setSelectedNodeShapeIndex({ state, commit }, index) {
-        commit('setSelectedNodeShapeIndex', index)
+    setNodeShapeCurrentIndex({ state, commit }, index) {
+        commit('setNodeShapeCurrentIndex', index)
     },
-
-    // Set selected edge color type index
-    setSelectedEdgeColorTypeIndex({ state, commit }, index) {
-        commit('setSelectedEdgeColorTypeIndex', index)
+    setEdgeColoringMethodCurrentIndex({ state, commit }, index) {
+        commit('setEdgeColoringMethodCurrentIndex', index)
     },
-
-    // Set selected node label format index
-    setSelectedNodeLabelFormatIndex({ state, commit }, index) {
-        commit('setSelectedNodeLabelFormatIndex', index)
+    setNodeLabelFormatCurrentIndex({ state, commit }, index) {
+        commit('setNodeLabelFormatCurrentIndex', index)
     },
-
-    // Set Node Uniform Color
     setNodeUniformColor({ state, commit }, color) {
         commit('setNodeUniformColor', color)
     },
-
-    // Set uniform node color
     setUniformNodeColor({ state, commit }, color) {
         commit('setUniformNodeColor', color)
     },
-
-    // Set domain color
     setDomainColor({ state, commit }, color) {
         commit('setDomainColor', color)
     },
-
-    // Get edge color
     setEdgeColor({ state, commit }, color) {
         commit('setEdgeColor', color)
     },
-
-    // Set 'useDifferentStyleForExtEdges'
     setUseDifferentStyleForExtEdges({ state, commit }, useDifferentStyleForExtEdges) {
         commit('setUseDifferentStyleForExtEdges', useDifferentStyleForExtEdges)
     },
-    // Set "coloringAction"
     setColoringAction({ state, commit }, coloringAction) {
         commit('setColoringAction', coloringAction)
     },
-
-    // TODO: Try to re-organize variables names
-    setLatestUniformNodeSizeUsedValue({ state, commit }, latestUniformNodeSizeUsedValue) {
-        commit('setLatestUniformNodeSizeUsedValue', latestUniformNodeSizeUsedValue)
+    setUniformNodeSize({ state, commit }, uniformNodeSize) {
+        commit('setUniformNodeSize', uniformNodeSize)
     },
-
-    setLatestFileSizeBasedNodeSizeValue({ state, commit }, latestFileSizeBasedNodeSizeValue) {
-        commit('setLatestFileSizeBasedNodeSizeValue', latestFileSizeBasedNodeSizeValue)
+    setInlinkNodeSizeRange({ state, commit }, inlinkNodeSizeRange) {
+        commit('setInlinkNodeSizeRange', inlinkNodeSizeRange)
     },
-
-    setLatestInlinkCountBasedNodeSizeValue({ state, commit }, latestInlinkCountBasedNodeSizeValue) {
-        commit('setLatestInlinkCountBasedNodeSizeValue', latestInlinkCountBasedNodeSizeValue)
+    setOutlinkNodeSizeRange({ state, commit }, outlinkNodeSizeRange) {
+        commit('setOutlinkNodeSizeRange', outlinkNodeSizeRange)
     },
-
-    setLatestOutlinkCountBasedNodeSizeValue({ state, commit }, latestOutlinkCountBasedNodeSizeValue) {
-        commit('setLatestOutlinkCountBasedNodeSizeValue', latestOutlinkCountBasedNodeSizeValue)
-    },
-
-    // Set source node for path finder
     setPathFinderSource({ state, commit }, source) {
         commit('setPathFinderSource', source)
     },
-
-    // Set target node for path finder
     setPathFinderTarget({ state, commit }, target) {
         commit('setPathFinderTarget', target)
     },
-
-    // Set operation result of the path finder
     setPathFinderResult({ state, commit }, result) {
         commit('setPathFinderResult', result)
+    },
+    setPathFinderMessageType({ state, commit }, messageType) {
+        commit('setPathFinderMessageType', messageType)
     }
 }

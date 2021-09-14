@@ -87,8 +87,32 @@
             :disabled="singleControl.disabled"
           >
           </v-switch>
+          <!-- Else check if this is a group button -->
+          <v-btn-toggle
+            v-else-if="singleControl.type === 'toggleButton'"
+            v-model="singleControl.selected"
+            :disabled="true"
+            dense
+            group
+            color="#CE7330"
+          >
+            <template
+              v-for="(button, buttonName, index3) in singleControl.buttonList"
+            >
+              <v-tooltip top>
+                <template v-slot:activator="{ on }">
+                  <v-btn v-on="on" icon :disabled="singleControl.disabled">
+                    <v-icon v-if="button.icon">{{ button.icon }}</v-icon>
+                    <v-icon v-else-if="button.iconClass" :class="button.iconClass"></v-icon>
+                    <template v-else>{{button.label}}</template>
+                  </v-btn>
+                </template>
+                <span>{{ button.tooltip }}</span>
+              </v-tooltip>
+            </template>
+          </v-btn-toggle>
           <!-- Else check if this is a speed dial -->
-          <v-speed-dial
+          <!-- <v-speed-dial
             v-else-if="singleControl.type === 'speedDial'"
             class="ma-1"
             direction="bottom"
@@ -135,7 +159,7 @@
                 <span>{{ button.tooltip }}</span>
               </v-tooltip>
             </template>
-          </v-speed-dial>
+          </v-speed-dial> -->
           <v-divider
             vertical
             v-if="
@@ -198,7 +222,7 @@ export default {
   },
   methods: {
     toggleVisor(visorName) {
-      console.log('Visor ' + visorName + ' is selected')
+      console.log("Visor " + visorName + " is selected");
     },
     forceUpdate() {
       setTimeout(() => {

@@ -1,5 +1,5 @@
 <template>
-  <v-footer dense padless color="black">
+  <v-footer dense padless color="black" class="footer">
     <v-row align="start">
       <v-col class="text-center footer-lower-part" cols="12">
         <p class="white--text">
@@ -48,5 +48,8 @@ export default {
   /*background-color:#fff;*//* This is the original */
   background-color:#000;/* This is the original */
   padding: 0 !important;
+}
+.footer {
+  border-top: 1px solid #6B6B6B !important;
 }
 </style>

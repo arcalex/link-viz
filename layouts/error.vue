@@ -1,56 +1,27 @@
 <template>
-  <v-app dark>
+  <!-- <v-app style="background-color:white;overflow-y:auto;"> -->
     <div
-      class="flex-container d-flex flex-column justify-center align-center root-div"
+      class="
+        flex-container
+        d-flex
+        flex-column
+        justify-center
+        align-center
+        root-div
+      "
     >
-      <div class="oops-div">Oops!</div>
-      <!-- <div v-if="error.statusCode === 404"> -->
-      <!-- Display Error 404 (Not Found) Page -->
-      <!-- <v-img :src="require('~/assets/images/error404.png')"></v-img> -->
-
-      <!-- <img src="~/assets/images/error404.png" /> -->
-      <!-- </div> -->
-      <!-- <div v-else> -->
-      <!-- Display Error 500 (Internal Error) Page -->
-      <div :class="backgroundImageClass">
-        <!-- <img
-          v-if="this.error.statusCode === 404"
-          src="~/assets/images/error404.png"
-        />
-        <img v-else src="~/assets/images/error500.png" /> -->
-        <div
-          :class="
-            this.error.statusCode === 404 ? 'error-code-404' : 'error-code-500'
-          "
-        >
-          {{ this.error.statusCode }}
-        </div>
+      <div class="error-code">{{ errorCode }}</div>
+      <div class="d-flex justify-center title-div">
+        {{ title }}
       </div>
-      <div class="div-descriptive-error-message d-flex justify-center">
-        {{
-          this.error.statusCode === 404
-            ? "Page Not Found"
-            : "Internal Server Error"
-        }}
-      </div>
+      <p class="description-p">
+        {{ description }}
+      </p>
       <div class="d-flex justify-center">
-        <nuxt-link to="/" class="home-link">Go Home</nuxt-link>
+        <a href="/" class="home-link nuxt-link-active">Go Home</a>
       </div>
-      <!-- <img src="~/assets/images/error500.png" /> -->
-
-      <!-- <v-img :src="require('~/assets/images/error500.png')"></v-img> -->
     </div>
-    <!-- </div> -->
-    <!-- <h1 v-if="error.statusCode === 404">
-      {{ pageNotFound }}
-    </h1>
-    <h1 v-else>
-      {{ otherError }}
-    </h1>
-    <NuxtLink to="/">
-      Home page
-    </NuxtLink> -->
-  </v-app>
+  <!-- </v-app> -->
 </template>
 
 <script>
@@ -81,7 +52,7 @@
  * This is the error page
  */
 export default {
-  layout: "empty",
+  layout: 'default',
   props: {
     error: {
       type: Object,
@@ -90,30 +61,38 @@ export default {
   },
   data() {
     return {
-      pageNotFound: "404 Not Found",
-      otherError: "An error occurred",
-      backgroundImageClass: "",
+      errorCode: "",
+      title: "",
+      description: "",
     };
   },
   head() {
-    const title =
-      this.error.statusCode === 404 ? this.pageNotFound : this.otherError;
-    return {
-      title,
-    };
+    return "Error - LinkGate";
   },
   mounted() {
     this.$nextTick(() => {
+      this.errorCode = `${this.error.statusCode}`;
       switch (this.error.statusCode) {
         case 404:
-          this.backgroundImageClass =
-            "error-code-404-root-div d-flex justify-center";
+          this.title = "Page Not Found!";
+          this.description =
+            "We're sorry, but the page you were looking for doesn't exist.";
+          break;
+
+        case 500:
+          // For now, let it be error 500
+          this.title = "Internal Server Error!";
+          this.description =
+            "We regret the inconvenience and hope the issue will be resolved soon. Please feel free to contact us at linkgate@iipc.simplelists.com.";
           break;
 
         default:
-          this.backgroundImageClass =
-            "error-code-500-root-div d-flex justify-center";
-          break;
+          // General message for that error
+          this.title = "Error!";
+          this.description =
+            "We regret the inconvenience and hope the issue will be resolved soon. Please feel free to contact us at linkgate@iipc.simplelists.com.";
+
+        // Futuristic TODO: You can add multiple codes for handling
       }
     });
   },
@@ -121,59 +100,44 @@ export default {
 </script>
 
 <style scoped>
-/* h1 {
-  font-size: 20px;
-} */
-
 .root-div {
-  background-color: white;
+  display: inline-block !important;
+  width: 50%;
+  margin: 0 auto;
+  background-color:white;
+}
+.theme--dark.v-application {
+  color: #ffffff;
 }
 
-.oops-div {
+.error-code {
   text-align: center;
   color: rgb(100, 100, 100);
-  font-size: 40pt;
+  font-size: 82pt;
+  font-weight: bolder;
+  line-height: 1;
 }
 
-.error-code-500-root-div {
-  /* position: absolute;  */
-  background-color: rgba(255, 255, 255, 1);
-  background-image: url('~assets/images/error500.png');
-  background-size: contain;
-  overflow: hidden;
+/* Page Not Found */
+.title-div {
+  font-weight: bold;
+  font-size: 30px;
+  color: tomato;
 }
 
-.error-code-404-root-div {
-  /* position: absolute;  */
-  background-color: rgba(255, 255, 255, 1);
-  background-image: url('~assets/images/error404.png');
-  background-size: contain;
-  overflow: hidden;
+.description-p {
+  color: #333;
+  text-align: center;
 }
 
-.error-code-500 {
-  font-size: 60pt;
-  position: absolute;
-  right: 45%;
-  top: 28%;
-  color: rgb(50, 50, 50);
-}
-
-.error-code-404 {
-  font-size: 60pt;
-  position: absolute;
-  color: rgb(50, 50, 50);
-  right: 45%;
-  top: 35%;
-}
-
-.div-descriptive-error-message {
-  color: rgb(199, 62, 48);
-}
-
+/* Go Home*/
 .home-link {
   border-radius: 25pt;
   padding: 12px;
-  background-color: yellow;
+  background-color: #e65035;
+  color: #fff;
+  text-decoration: navajowhite;
+  padding: 10px 39px;
+  margin-top: 30px;
 }
 </style>

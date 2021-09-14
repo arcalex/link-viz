@@ -1,10 +1,11 @@
 <template>
 <!-- This div must be added so that Header can be in its tree size!!!! -->
   <div>
-  <v-app-bar dense dark color="black">
+  <v-app-bar dense dark color="black" class="header"> 
     <div v-if="this.$route.path !== '/'">
       <nuxt-link to="/" v-if="this.$route.path !== '/'">
-        <img src="~/assets/images/linkGate_logo_white.png" />
+        <img class="brand-img" src="~/assets/images/LogoIcon-White.png" />
+        <span class="brand-name">LinkGate</span>
       </nuxt-link>
     </div>
 
@@ -67,5 +68,22 @@ export default {
 .headerLink:hover {
   text-decoration: underline;
   color: #fff;
+}
+.brand-name {
+  float: left;
+display: flex;
+line-height: 42px;
+color: #fff;
+font-size: 25px;
+font-weight: bold;
+margin-left: 10px;
+text-transform: uppercase;
+}
+.brand-img {
+  float: left;
+  width: 40px
+}
+.header {
+  border-bottom: 1px solid #6B6B6B !important;
 }
 </style>

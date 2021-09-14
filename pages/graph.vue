@@ -1,125 +1,323 @@
 <template>
   <client-only>
     <v-container fluid class="home-container">
-
       <Toolbar :toolbarItems="toolbarItems" />
 
-      <v-dialog v-model="showSettingsDialog" persistent max-width="1000">
-        <!-- <Settings
-        @onClose="showSettingsDialog = false"
-        @onBackgroundColorChanged="changeBackgroundColor"
-        :currentBackgroundColor="this.$refs.graph_canvas_ref.style.backgroundColor"
-      /> -->
-        <Settings @onClose="showSettingsDialog = false" />
-      </v-dialog>
-
+      <v-scroll-x-transition>
+        <v-btn
+          absolute
+          class="settings-show-button"
+          rounded
+          v-show="!showSettings"
+          @click="showSettings = true"
+        >
+          Settings
+        </v-btn>
+      </v-scroll-x-transition>
+      <v-slide-x-transition>
+        <Settings v-show="showSettings" @hideSettings="showSettings = false" />
+      </v-slide-x-transition>
+      <PopupMessage
+        v-show="showPopupMessage"
+        :arrowDirection="showArrowDirection"
+        :message="popupMessage"
+        :title="popupMessageTitle"
+        :position="popupMessagePos"
+        @hidePopupMessage="showPopupMessage = false"
+      />
+      <v-scroll-x-transition>
+        <v-btn
+          absolute
+          class="graph-locator-show-button"
+          rounded
+          v-show="!showGraphLocator"
+          @click="showGraphLocator = true"
+        >
+          Graph Locator
+        </v-btn>
+      </v-scroll-x-transition>
       <v-navigation-drawer
         v-model="showGraphLocator"
-        class="right-toolbar"
+        class="graph-locator"
         style="background-color: rgba(0, 0, 0, 0.8)"
         dark
         absolute
       >
-        <v-row no-gutters class="aside-title">
-          <h4 class="white--text">Graph Locator</h4>
-          <v-spacer></v-spacer>
-          <v-col cols="auto">
-            <v-btn
-              color="white"
-              icon
-              dark
-              x-small
-              @click="showGraphLocator = false"
-            >
-              <v-icon>mdi-close</v-icon>
-            </v-btn>
-          </v-col>
-        </v-row>
-        <URLGraphSeeker
-          color="#666"
-          background-color="#FFFFFF"
-          :initialURL="this.$route.query['url']"
-          @readyURL="resetupURL"
-        />
-        <v-radio-group mandatory column v-model="selectedGraphLocatorModeIndex">
-          <template v-slot:label>
-            <div>Mode</div>
-          </template>
-          <v-radio
-            v-for="(mode, index) in getGraphLocatorModeOptionList"
-            :label="mode"
-            :key="index"
-          >
-          </v-radio>
-        </v-radio-group>
-
-        <div>
-          <v-tooltip top>
-            <template v-slot:activator="{ on }">
-              <v-btn v-on="on" icon @click="activateTimeline" :disabled="!enableStartBuildingTimelineButton">
-                <v-icon>mdi-chart-timeline-variant</v-icon>
-                <!-- <v-icon>mdi-timeline-clock-outline</v-icon> -->
+        <div class="d-flex flex-column" style="height: 100%">
+          <v-row no-gutters class="aside-title flex-grow-0">
+            <h4 class="white--text">Graph Locator</h4>
+            <v-spacer></v-spacer>
+            <v-col cols="auto">
+              <v-btn
+                color="white"
+                icon
+                dark
+                x-small
+                @click="showGraphLocator = false"
+              >
+                <v-icon>mdi-close</v-icon>
               </v-btn>
-            </template>
-            <span>Start building timeline</span>
-          </v-tooltip>
-        </div>
+            </v-col>
+          </v-row>
+          <div
+            class="d-flex flex-column justify-space-between graph-locator-panel"
+            style="width: 100%; height: 100%; overflow: hidden; padding: 15px"
+          >
+            <URLGraphSeeker
+              color="#666"
+              class="flex-grow-0 url-graph-seeker"
+              background-color="#FFFFFF"
+              :initialURL="this.$route.query['url']"
+              @readyURL="resetupURL"
+            />
+            <div class="d-flex justify-start mb-1">
+              <v-btn-toggle
+                mandatory
+                dense
+                rounded
+                v-model="viewMode"
+                class="mr-1"
+              >
+                <v-tooltip top>
+                  <template v-slot:activator="{ on }">
+                    <v-btn v-on="on" small :disabled="timelineReady === true">
+                      <v-icon>mdi-graph-outline</v-icon>
+                    </v-btn>
+                  </template>
+                  <span>View graph for single snapshot</span>
+                </v-tooltip>
 
-        <v-treeview
-          style="border: 5px solid #222"
-          :items="searchTreeItems"
-          :load-children="loadSearchTreePart"
-          :selectable="selectableGraphLocator"
-          v-model="selectedSnapshotList"
-          selected-color="teal"
-          dense
-          color="teal"
-          activatable
-          transition
-          open-on-click
-          @update:active="toggleCalendar"
-          return-object
-        ></v-treeview>
+                <v-tooltip top>
+                  <template v-slot:activator="{ on }">
+                    <v-btn v-on="on" small :disabled="timelineReady === true">
+                      <v-icon>mdi-animation-outline</v-icon>
+                    </v-btn>
+                  </template>
+                  <span>View graph for timeline</span>
+                </v-tooltip>
+              </v-btn-toggle>
+
+              <!-- <v-spacer>
+          </v-spacer> -->
+
+              <v-btn-toggle
+                mandatory
+                dense
+                rounded
+                v-model="snapshotSelectionMode"
+                class="ml-1"
+              >
+                <v-tooltip top>
+                  <template v-slot:activator="{ on }">
+                    <v-btn
+                      v-on="on"
+                      small
+                      :disabled="viewMode === 1 || timelineReady === true"
+                    >
+                      <v-icon>mdi-file-tree-outline</v-icon>
+                    </v-btn>
+                  </template>
+                  <span>Select snapshot from tree</span>
+                </v-tooltip>
+
+                <v-tooltip top>
+                  <template v-slot:activator="{ on }">
+                    <v-btn
+                      v-on="on"
+                      small
+                      :disabled="viewMode === 1 || timelineReady === true"
+                    >
+                      <!-- <v-icon>mdi-calendar-month-outline</v-icon> -->
+                      <v-icon>mdi-calendar</v-icon>
+                    </v-btn>
+                  </template>
+                  <span>Select snapshot from calendar</span>
+                </v-tooltip>
+              </v-btn-toggle>
+            </div>
+            <div class="d-flex flex-row">
+              <SpinBox
+                :placeholder="
+                  'Greater than 1 and less than ' + depthMaxAllowedValue
+                "
+                label="Maximum Depth"
+                :min="1"
+                :max="depthMaxAllowedValue"
+                :initValue="1"
+                @valueReady="setMaximumDepth"
+                :disabled="timelineReady === true"
+              />
+              <SpinBox
+                placeholder="Span values in minutes"
+                label="Time Elasticity (mins)"
+                :min="0"
+                :max="9000"
+                :initValue="timeElasticity"
+                @valueReady="setTimeElasticity"
+                :disabled="timelineReady === true"
+              />
+            </div>
+            <v-treeview
+              style="border: 5px solid #222; overflow-y: auto"
+              class="flex-grow-1 flex-shrink-1"
+              :items="searchTreeItems"
+              :load-children="loadSearchTreePart"
+              selected-color="#CE7330"
+              dense
+              color="#CE7330"
+              transition
+              return-object
+            >
+              <!-- :selectable="viewMode === 1" -->
+              <!-- v-model="selectedSnapshotList" -->
+              <!-- This isn't working for the current new model -->
+              <template v-if="viewMode === 0" v-slot:append="{ item }">
+                <v-tooltip v-if="item.type === 's'" top>
+                  <template v-slot:activator="{ on }">
+                    <v-btn
+                      v-on="on"
+                      icon
+                      color="#CE7330"
+                      v-show="viewMode === 0 && snapshotSelectionMode === 0"
+                      @click="loadGraphWithSnapshot_NEW(item.value)"
+                    >
+                      <v-icon>mdi-graph</v-icon>
+                    </v-btn>
+                  </template>
+                  <span>Load graph</span>
+                </v-tooltip>
+                <v-tooltip v-else-if="item.type === 'm'" top>
+                  <template v-slot:activator="{ on }">
+                    <v-btn
+                      v-on="on"
+                      icon
+                      color="#CE7330"
+                      v-show="viewMode === 0 && snapshotSelectionMode === 1"
+                      @click="openCalendar(item)"
+                    >
+                      <v-icon>mdi-calendar-month-outline</v-icon>
+                    </v-btn>
+                  </template>
+                  <span>Show monthly calendar</span>
+                </v-tooltip>
+              </template>
+              <template v-else v-slot:append="{ item }">
+                <!-- :ripple="false" --><!-- This attribute is a must due to strange warning -->
+                <v-simple-checkbox
+                  v-if="item.type === 's'"
+                  v-model="item.selected"
+                  :ripple="false"
+                  color="#CE7330"
+                  :disabled="timelineReady === true"
+                  @click="
+                    item.selected
+                      ? addSnapshotToTimeline(item)
+                      : removeSnapshotFromTimeline(item)
+                  "
+                >
+                </v-simple-checkbox>
+              </template>
+            </v-treeview>
+
+            <!-- <div class="d-flex justify-center align-end"> -->
+            <!-- <div class="align-end mt-auto"> -->
+            <v-alert
+              type="warning"
+              outlined
+              dense
+              v-show="viewMode === 1 && selectedSnapshotList.length < 2"
+            >
+              Select two or more Snapshots
+            </v-alert>
+            <v-tooltip v-if="!timelineReady" top class="align-end">
+              <template v-slot:activator="{ on }">
+                <v-btn
+                  class="build-timeline"
+                  v-on="on"
+                  rounded
+                  @click="activateTimeline"
+                  color="#CE7330"
+                  :disabled="viewMode === 0 || selectedSnapshotList.length < 2"
+                >
+                  Build timeline ({{ selectedSnapshotList.length }})
+                </v-btn>
+              </template>
+              <span>Start building timeline with selected snapshots</span>
+            </v-tooltip>
+            <v-tooltip v-else top class="align-end">
+              <template v-slot:activator="{ on }">
+                <v-btn
+                  class="build-timeline"
+                  v-on="on"
+                  rounded
+                  @click="closeTimeline"
+                  color="#CE7330"
+                >
+                  Close timeline
+                </v-btn>
+              </template>
+              <span>Close timeline and unload related data</span>
+            </v-tooltip>
+            <!-- </div> -->
+          </div>
+        </div>
       </v-navigation-drawer>
 
-      <!-- Calendar -->
-      <v-menu
-        absolute
-        offset-y
+      <v-dialog
         v-model="calendarShown"
-        min-width="40%"
+        persistent
+        max-width="40%"
         ref="calendar"
-        max-height="50%"
-        :position-x="mousePosX"
-        :position-y="mousePosY"
-        :close-on-content-click="false"
+        overlay-opacity="0.3"
+        overlay-color="#222222"
       >
         <EventCalendar
           :year="calendarYear"
           :month="calendarMonth"
           :title="calendarTitle"
+          :targetURLInSSURT="targetURLInSSURT"
           @closeCalendar="calendarShown = false"
-          @loadGraph="loadGraphWithSnapshot"
+          @loadGraph="loadGraphWithSnapshot_NEW"
         />
-      </v-menu>
+      </v-dialog>
 
       <ProgressIndicator />
 
-      <FinderTool
-        :type="selectedFinderType"
-        v-show="showFinderTool"
-        @hideFinderTool="
-          showFinderTool = false;
-          finderAndVisorItems.items.finders.selected = undefined;
-        "
+      <PathFinderTool
+        v-show="selectedFinder === 'path'"
+        @hidePathFinderTool="hidePathFinderTool"
         @requestNodeSelection="requestNodeSelection"
         @cancelNodeSelectionRequest="cancelNodeSelection"
         @fitNodeSelectionToView="fitNodeSelectionToView"
+        @fitAllNodesToView="fitAllNodesToView"
+        @swapSourceAndTargetNodes="swapSourceAndTargetNodes"
       />
+      <!-- v-show="showFinderTool" -->
 
+      <v-scroll-x-transition>
+        <v-tooltip top>
+          <template v-slot:activator="{ on }">
+            <v-btn
+              v-on="on"
+              absolute
+              x-small
+              class="info-board-show-button"
+              rounded
+              color="#CE7330AA"
+              v-show="!showInfoBoard && cyto"
+              @click="showInfoBoard = true"
+            >
+              Info Board
+            </v-btn>
+          </template>
+          <span>Open Info Board for viewing node properties</span>
+        </v-tooltip>
+      </v-scroll-x-transition>
       <InfoBoard
         v-show="showInfoBoard"
         :targetNode="selectedNode"
+        :graphPropertyList="graphPropertyList"
+        :timelinePropertyList="timelinePropertyList"
         @hideInfoBoard="showInfoBoard = false"
         @showNodeInfo="showNodeInfo"
         @visitNodeURL="visitNodeURL"
@@ -136,6 +334,7 @@
         v-show="timelineReady"
         @doAnimationAction="doAnimationAction"
         @toggleRepeat="toggleRepeat"
+        @updateCurVal="updateCurVal"
       />
 
       <!-- The first of div is needed for solving the problem of height increase that push down the footer -->
@@ -179,19 +378,30 @@ import EventCalendar from "@/components/EventCalendar";
 import InfoBoard from "@/components/InfoBoard";
 import GraphTimeline from "@/components/GraphTimeline";
 import URLGraphSeeker from "@/components/URLGraphSeeker";
-import FinderTool from "@/components/FinderTool";
+import PathFinderTool from "@/components/PathFinderTool";
 import Toolbar from "@/components/Toolbar";
 import Settings from "@/components/Settings";
 import ProgressIndicator from "@/components/ProgressIndicator";
+import PopupMessage from "@/components/PopupMessage";
+import SpinBox from "@/components/SpinBox.vue";
 import { ssurt } from "@/js/ssurt.js";
 import { utilities } from "@/js/utilities.js";
-
 
 // Cytoscape-based related
 import cytoscape from "cytoscape";
 import cise from "cytoscape-cise";
-import expandCollapse from "cytoscape-expand-collapse"; // More info at https://github.com/iVis-at-Bilkent/cytoscape.js-expand-collapse
+import euler from "cytoscape-euler"; // Before run this command npm install cytoscape-euler, more info at https://github.com/cytoscape/cytoscape.js-euler
+import avsdf from "cytoscape-avsdf";
+import coseBilkent from "cytoscape-cose-bilkent"; // Before run this command npm install cytoscape-cose-bilkent, more info at https://github.com/cytoscape/cytoscape.js-cose-bilkent
+import cola from "cytoscape-cola"; // Before run this command npm install cytoscape-cola, more info at https://github.com/cytoscape/cytoscape.js-cola
+import klay from "cytoscape-klay"; // Before run this command npm install cytoscape-klay, more info at https://github.com/cytoscape/cytoscape.js-klay
+import dagre from "cytoscape-dagre"; // Before run this command npm install cytoscape-dagre, more info at https://github.com/cytoscape/cytoscape.js-dagre
+import spread from "cytoscape-spread"; // Before run this command npm install cytoscape-spread, more info at https://github.com/cytoscape/cytoscape.js-spread
+import fcose from "cytoscape-fcose"; // Before run this command npm install cytoscape-fcose, more info at https://github.com/iVis-at-Bilkent/cytoscape.js-fcose
+// import elk from 'cytoscape-elk'; // Before run this command npm install cytoscape-elk, more info at https://github.com/cytoscape/cytoscape.js-elk
 
+import cxtmenu from "cytoscape-cxtmenu";
+import expandCollapse from "cytoscape-expand-collapse"; // More info at https://github.com/iVis-at-Bilkent/cytoscape.js-expand-collapse
 
 /*******************************************************************************
 
@@ -239,7 +449,6 @@ import expandCollapse from "cytoscape-expand-collapse"; // More info at https://
 
 /* Minified using https://skalman.github.io/UglifyJS-online/ */
 /*! Home: https://github.com/gorhill/publicsuffixlist.js -- GPLv3 APLv2 */
-// (function(e){;let t,n,i,r=0,o="";const f=function(){window instanceof Object&&window.dispatchEvent instanceof Function&&window.CustomEvent instanceof Function&&window.dispatchEvent(new CustomEvent("publicSuffixListChanged"))},c=function(e){if(r=e+3&-4,!(void 0!==n&&n.byteLength>=r)){if(void 0!==t){const e=(r+65535>>>16)-(t.buffer.byteLength>>>16);e>0&&(t.grow(e),n=new Uint32Array(t.buffer),i=new Uint8Array(t.buffer))}else i=new Uint8Array(r),n=new Uint32Array(i.buffer);o="",i[256]=0}},s=function(e){const t=i;if(e===o)return t[256];if(null===e||0===e.length)return o="",t[256]=0;e=e.toLowerCase(),o=e;let n=e.length;n>255&&(n=255),t[256]=n;let r=n,f=257;for(;r--;){const n=e.charCodeAt(r);46===n&&(t[f+0]=r+1,t[f+1]=r,f+=2),t[r]=n}return t[f]=0,n},u=function(){const e=i,t=n,r=t[101];let o=n[100],f=-1,c=256;for(;;){const n=e[c+1],i=e[c+0]-n;let s=t[o+0]>>>16;if(0===s)break;const u=t[o+2];let l=0,a=0;for(;l<s;){const o=l+s>>>1,f=u+o+(o<<1),c=255&t[f+0];let d=i-c;if(0===d){const o=c<=4?f+1<<2:r+t[f+1];for(let t=0;t<i&&0===(d=e[n+t]-e[o+t]);t++);}if(d<0)s=o;else{if(!(d>0)){a=f;break}l=o+1}}if(0===a){if(42!==e[u+1<<2])break;e[399]=1,a=u}if(0!=(512&t[(o=a)+0])){if(c>256)return c-2;break}if(0!=(256&t[o+0])&&(f=c),0===n)break;c+=2}return f};let l,a=u;const d=function(){let e,r;{const t=new URL(document.currentScript.src),n=/[^\/]+$/.exec(t.pathname);null!==n&&(t.pathname=t.pathname.slice(0,n.index)),e=t.href}return function(){if(l instanceof Function)return Promise.resolve(!0);if("object"!=typeof WebAssembly||"function"!=typeof WebAssembly.instantiateStreaming)return Promise.resolve(!1);const o=new Uint32Array(1),f=new Uint8Array(o.buffer);return o[0]=1,1!==f[0]?Promise.resolve(!1):fetch(e+"wasm/publicsuffixlist.wasm",{mode:"same-origin"}).then(e=>{const t=void 0!==i?i.byteLength+65535>>>16:1;return r=new WebAssembly.Memory({initial:t}),WebAssembly.instantiateStreaming(e,{imports:{memory:r}})}).then(({instance:e})=>{const o=r.buffer.byteLength>>>16,f=void 0!==i?i.byteLength+65535>>>16:0;if(f>o&&r.grow(f-o),void 0!==n){const e=new Uint8Array(r.buffer),t=new Uint32Array(r.buffer);t.set(n),i=e,n=t}return t=r,l=e.exports.getPublicSuffixPos,a=l,r=void 0,!0}).catch(e=>(console.info(e),!1))}}();(e=e||window).publicSuffixList={version:"2.0",parse:function(e,t){const r={l:"",f:0,c:void 0};{const n=function(e,t){let n=e.length,i=n-t.length;if(0!==i)return i;for(let r=0;r<n;r++)if(0!=(i=e.charCodeAt(r)-t.charCodeAt(r)))return i;return 0},i=function(e,t){let i=r,o=e.length;for(;o>0;){const t=e.lastIndexOf(".",o-1),r=e.slice(t+1,o);if(o=t,!1===Array.isArray(i.c)){const e={l:r,f:0,c:void 0};i.c=[e],i=e;continue}let f=0,c=i.c.length;for(;f<c;){const e=f+c>>>1,t=n(r,i.c[e].l);if(t<0){if((c=e)===f){const e={l:r,f:0,c:void 0};i.c.splice(f,0,e),i=e;break}}else{if(!(t>0)){i=i.c[e];break}if((f=e+1)===c){const e={l:r,f:0,c:void 0};i.c.splice(c,0,e),i=e;break}}}}i.f|=1,t&&(i.f|=2)};i("*",!1);const o=/[^a-z0-9.-]/,f=e.length;let c=0;for(;c<f;){let n=e.indexOf("\n",c);-1===n&&-1===(n=e.indexOf("\r",c))&&(n=f);let r=e.slice(c,n).trim();c=n+1;const s=r.indexOf("//");if(-1!==s&&(r=r.slice(0,s)),0===(r=r.trim()).length)continue;const u=33===r.charCodeAt(0);u&&(r=r.slice(1)),o.test(r)&&(r=t(r.toLowerCase())),i(r,u)}}{const e=new Map,t=[],o=[],f=function(e){const n=t.length;for(let n=0;n<e;n++)t.push(0);return n},s=function(n,i){const r=i.l.length,c=void 0!==i.c?i.c.length:0;if(t[n+0]=c<<16|i.f<<8|r,r<=4){let e=0;r>0&&(e|=i.l.charCodeAt(0),r>1&&(e|=i.l.charCodeAt(1)<<8,r>2&&(e|=i.l.charCodeAt(2)<<16,r>3&&(e|=i.l.charCodeAt(3)<<24)))),t[n+1]=e}else{let f=e.get(i.l);if(void 0===f){f=o.length;for(let e=0;e<r;e++)o.push(i.l.charCodeAt(e));e.set(i.l,f)}t[n+1]=f}if(!1===Array.isArray(i.c))return void(t[n+2]=0);const u=f(3*c);t[n+2]=u;for(let e=0;e<c;e++)s(u+3*e,i.c[e])};f(128);const u=f(3);s(u,r),t[100]=u;const l=t.length<<2;t[101]=l;const a=(t.length<<2)+(o.length+3&-4);c(a),n.set(t),i.set(o,t.length<<2)}f()},getDomain:function(e){if(void 0===n)return"";const t=s(e),r=i;if(0===t||46===r[0])return"";const f=a();if(-1===f||0===r[f+1])return"";const c=r[f+3];return 0===c?o:o.slice(c)},getPublicSuffix:function(e){if(void 0===n)return"";const t=s(e),r=i;if(0===t||46===r[0])return"";const f=a();if(-1===f)return"";const c=r[f+1];return 0===c?o:o.slice(c)},suffixInPSL:function(e){if(void 0===n)return!1;const t=s(e),r=i;if(0===t||46===r[0])return!1;r[399]=0;const o=a();return-1!==o&&0===r[o+1]&&1!==r[399]},toSelfie:function(e){if(void 0===i)return"";if(e instanceof Object)return`2\t${e.encode(i.buffer,r)}`;return{magic:2,buf32:Array.from(new Uint32Array(i.buffer,0,r>>>2))}},fromSelfie:function(e,t){let r=0;if("string"==typeof e&&0!==e.length&&t instanceof Object){const n=e.indexOf("\t");if(-1===n||"2"!==e.slice(0,n))return!1;const o=e.slice(n+1);if(0===(r=t.decodeSize(o)))return!1;c(r),t.decode(o,i.buffer)}else{if(!(e instanceof Object&&2===e.magic&&Array.isArray(e.buf32)))return!1;r=e.buf32.length<<2,c(r),n.set(e.buf32)}return o="",i[256]=0,f(),!0},disableWASM:function(){if(l instanceof Function&&(a=u,l=void 0),void 0!==t){if(void 0!==n){const e=new Uint8Array(r),t=new Uint32Array(e.buffer);t.set(n),i=e,n=t}t=void 0}},enableWASM:d},"undefined"!=typeof module?module.exports=e.publicSuffixList:"undefined"!=typeof exports&&(exports=e.publicSuffixList)})(this);
 
 /*! http://mths.be/punycode v1.2.3 by @mathias */
 (function (o) {
@@ -458,33 +667,33 @@ const monthStringList = [
   "December",
 ];
 
-// Node Shape List supported by Cytoscape
-const nodeShapeList = [
-  "ellipse",
-  "triangle",
-  "round-triangle",
-  "rectangle",
-  "round-rectangle",
-  "bottom-round-rectangle",
-  "cut-rectangle",
-  "barrel",
-  "rhomboid",
-  "diamond",
-  "round-diamond",
-  "pentagon",
-  "round-pentagon",
-  "hexagon",
-  "round-hexagon",
-  "concave-hexagon",
-  "heptagon",
-  "round-heptagon",
-  "octagon",
-  "round-octagon",
-  "star",
-  "tag",
-  "round-tag",
-  "vee",
-];
+// // Node Shape List supported by Cytoscape
+// const nodeShapeList = [
+//   "ellipse",
+//   "triangle",
+//   "round-triangle",
+//   "rectangle",
+//   "round-rectangle",
+//   "bottom-round-rectangle",
+//   "cut-rectangle",
+//   "barrel",
+//   "rhomboid",
+//   "diamond",
+//   "round-diamond",
+//   "pentagon",
+//   "round-pentagon",
+//   "hexagon",
+//   "round-hexagon",
+//   "concave-hexagon",
+//   "heptagon",
+//   "round-heptagon",
+//   "octagon",
+//   "round-octagon",
+//   "star",
+//   "tag",
+//   "round-tag",
+//   "vee",
+// ];
 
 // ID generator using closure function. For more information about function closures refer to:
 // https://www.w3schools.com/js/js_function_closures.asp
@@ -562,44 +771,65 @@ export default {
     InfoBoard,
     ProgressIndicator,
     URLGraphSeeker,
-    FinderTool,
+    PathFinderTool,
+    PopupMessage,
     // FindersAndVisors,
     Toolbar,
     // LayoutParams,
     Settings,
     GraphTimeline,
+    SpinBox,
     // LinkvizSearch,
     //LinkvizNavigator
   },
-
-  head() {
-    return {
-      title: "Archive Visualization",
-      // script: [
-      //   {
-      //     hid: "punycode",
-      //     src: "/js/punycode.min.js",
-      //     body: true,
-      //   },
-      //   {
-      //     hid: "publicsuffixlist",
-      //     src: "/js/publicsuffixlist.js",
-      //     body: true,
-      //   },
-      // ],
-    };
-  },
-
-  // layout: "graphLayout",
 
   data() {
     var self = this;
 
     return {
+      graphPropertyList: [], // Graph data for displaying in the info board
+      // original code
+      // timelinePropertyList: [], // timeline data for displaying in the info board
+      // original code
+      // Test code
+      timelinePropertyList: [
+        // {
+        //   name: "URL",
+        //   value: "",
+        // },
+        // { name: "Snapshot Counts", value: 43 },
+      ], // timeline data for displaying in the info board
+      // Test code
+      // Hint tip list that are used in the application
+      hintTipList: {
+        graphLocator: {
+          initial:
+            "Welcome! Use the graph locator for selecting snapshot to view a graph. Or, select multiple snapshots for viewing timeline animation.",
+        },
+        settings: {
+          size: {
+            noLinks:
+              "No {0} exists, hence size calculation based on {0} count will have no effect.",
+            noVariance:
+              "No variance exists i.e. all {0} counts are equal. hence size calculation based on {0} count will have no effect.",
+          },
+        },
+        visors: {
+          flag: "No flag exists for the flag visor.",
+        },
+      },
+      // TEST
+      showArrowDirection: "left", // valid values: "top", "bottom", "right", "left", or null
+      popupMessagePos: null, // if not supplied, it'll be centered in the screen.
+      // Value format: {x:value ,y: value }) which is top left corner
+      showPopupMessage: true, // Flag for controlling the display of popup message
+      popupMessage: "", // Message displayed to user
+      popupMessageTitle: "", // Title of popup message
+      // TEST
       targetURL: "", // Target URL for which graphs are loaded with relation to other websites
       targetURLInSSURT: "", // The Target url in SSURT format
 
-      currentGraphSnapshotDate: null, // current Graph Snapshot Date (type will be date)
+      selectedTimestamp: null, // current Graph Snapshot timestamp
 
       // cluster
       // clusterIndex: 0,
@@ -623,20 +853,29 @@ export default {
       // PROOF of CONCEPT
       // cyto: {},
       cyto: undefined,
-      cytoNodes: [], // Default sort by ID
-      cytoEdges: [], // Default sort by ID
+      // cytoNodes: [], // Default sort by ID
+      // cytoEdges: [], // Default sort by ID
       nodeURLBasedIndexerMap: new Map(), // Indexer Map based on URL for speedup search
       edgeURLBasedIndexerMap: new Map(), // Indexer Map based of URL for speedup search
-      currentGraphDepth: 1/*null*//* For now, let it be 1  */, // Current Load graph depth. If null, no graph is loaded till now
-      reciprocalCurrentGraphDepth: null, // 1.0 / currentGraphDepth
-      cytoExpClpAPI: {},
+      // maximumDepth: 1, // Maximum Depth that can be obtained from a graph
+      maximumDepth_NEW: 1, // Maximum Depth that can be obtained from a graph
+      timeElasticity: 0, // Time (in minutes) elasticity defines the the margins for collecting nodes the edges beside a selected snapshot
+      // if zero, the parameter has no effect
+      depthMaxAllowedValue: 10, // Maximum allowed value for depth
+      // currentGraphDepth: 1 /*null*/ /* For now, let it be 1  */, // Current Load graph depth. If null, no graph is loaded till now
+      // reciprocalCurrentGraphDepth: null, // 1.0 / currentGraphDepth
+      cytoExpClpAPI: null, //{},
       // compoundNodes: [],
       // filteredNodes: null,
       selectedNode: null, // Single node selected
-      nodeDomainCluster: null, // node domain-based cluster
+      nodeDomainCluster: {}, // node domain-based cluster
       ciseClusterInfo: [], // Cluster Info for CISE Layout array of arrays
       rootNodeID: null, // root node that has a url corresponding to user URL and it should be unique
       expandCollapseExtansionInitialized: false, // Workaround for the problem of re-initializing the expandCollapse again that results in
+      viewMode: [], // Graph View Mode, valid values 0 for Single snapshot, and 1 for  Timeline
+      snapshotSelectionMode: [], // valid values: Tree, and Calendar
+      // countryFlags: new Map(), // Hold country flags
+      countryFlags: {}, // now it's class
       //  Page increase in height
 
       // New structure for timeline
@@ -658,8 +897,8 @@ export default {
       timeoutPromiseResolver: null,
       layout: null,
 
-      // showingAnimation: null, // Showing Animation Object
-      // hidingAnimation: null, // Hiding Animation Object
+      // Found Edges found by using path finder tool
+      pathFinderFoundEdgeList: [],
 
       requestNodeSelectionType: null, // Valid values: "source", "target", or null
 
@@ -673,11 +912,23 @@ export default {
 
       // Normal node style (default)
       normalNodeStyle: {
-        "background-color": "yellow", // Designer's concern
+        // "background-color": "yellow", // Designer's concern
+        // color: "#333333",
+        "background-color": "#CE7330", // Designer's concern
+        "border-style": "solid", // valid values: 'solid', 'dotted', 'dashed', or 'double'.
+        "border-width": "1",
+        "border-color": "#000000",
         // shape: nodeShapeList[this.selectedNodeShapeIndex], // Node Shape
-        // "background-image": function(node) {
-        //   return this.nodeDomainCluster[this.getDomainName(node.data("url"))].faviconData
+        // "background-image": (node) => self.nodeDomainCluster[self.getDomainName(node.data("url"))].favicon ,
+        // "background-image": (node) => {
+        //   let arr = [];
+        //   if (node.data("favicon")) {
+        //     arr.push(node.data("favicon"));
+        //   }
+        //   return arr;
         // },
+        // "background-fit": "cover", // values: "none","contain", or "cover"
+        // "background-image": [] ,
         // width: "10",
         // height: "10",
         // "background-image": "https://favicongrabber.com/download/https://cdn.cnn.com/cnn/.e/img/3.0/global/misc/apple-touch-icon.png", //[], // Maybe this should be empty at initialization!!??
@@ -691,13 +942,72 @@ export default {
         // Valid values for above property: "to-bottom" (default), "to-top", "to-left", "to-right", "to-bottom-right", "to-bottom-left", "to-top-right", and  "to-top-left"
       },
 
+      // Style for a collapsed node style
+      collapsedNodeStyle: {
+        "background-color": "#CE7330", // Designer's concern
+        "border-style": "double", // valid values: 'solid', 'dotted', 'dashed', or 'double'.
+        "border-width": "1",
+        "border-color": "#000000",
+        shape: "round-rectangle",
+      },
+
+      // Constant Node Style set only once
+      constantNormalNodeStyle: {
+        "background-fit": "cover",
+      },
+
+      // Selected Node style
+      selectedNodeStyle: {
+        // "background-color": "#FF0000", // Designer's concern
+        // 'border-style':'dashed', // valid values: 'solid', 'dotted', 'dashed', or 'double'.
+        "border-width": "5", // Designer's edits
+        "border-color": "#FF0000", // Designer's edits
+      },
+
+      // This is a style for override the effect of "selectedNodeStyle"
+      unselectedNodeStyle: {
+        // "background-color": "#FF0000", // Designer's concern
+        // 'border-style':'dashed', // valid values: 'solid', 'dotted', 'dashed', or 'double'.
+        "border-width": "1", // Designer's edits
+        "border-color": "#000000", // Designer's edits
+      },
+
+      // Path finder node style for discriminating node
+      pathFinderNodeStyle: {
+        "background-color": "#00FF00", // Designer's concern
+        // 'border-width':'1',           // Designer's edits
+        // 'border-color':'#000000'      // Designer's edits
+      },
+
       normalEdgeStyle: {
         width: 1,
-        "line-color": "#ccc", // Designer's TODO
-        "target-arrow-color": "#ccc", // Designer's TODO
-        "target-arrow-shape": "triangle",
-        "curve-style": "straight", //valid values: "unbundled-bezier","bezier", and "haystack"
+        "line-color": "#969696", // Designer's TODO
+        "target-arrow-color": "#969696", // Designer's TODO
+        "target-arrow-shape": "vee",
+        "arrow-scale": 1,
+        // To let the arrow be shown, 'curve-style' should be active
+        "curve-style": "straight", //valid values: 'unbundled-bezier','bezier', and 'haystack'
       },
+
+      // constantNormalEdgeStyle: {
+      //   width: 1,
+      //   // "line-color": "#969696", // Designer's TODO
+      //   // "target-arrow-color": "#969696", // Designer's TODO
+      //   "target-arrow-shape": "triangle",
+      //   "curve-style": "straight", //valid values: "unbundled-bezier","bezier", and "haystack"
+      // },
+
+      // Path Finder Edge Style for disriminating edge
+      pathFinderEdgeStyle: {
+        width: 2,
+        "line-color": "brown",
+        "target-arrow-color": "brown",
+        "target-arrow-shape": "vee",
+        "arrow-scale": 1,
+        // To let the arrow be shown, 'curve-style' should be active
+        "curve-style": "straight", //valid values: 'unbundled-bezier','bezier', and 'haystack'
+      },
+
       // grabbedNodeStyle: {
       //   "background-color": "blue",
       //   "background-fill": "solid",
@@ -709,48 +1019,35 @@ export default {
         // "target-arrow-shape": "triangle",
         // "curve-style": "straight", //"unbundled-bezier","bezier","haystack"
       },
+
       grabbedNodeIncomersEdgeStyle: {
         width: 2,
         "line-color": "red",
         "target-arrow-color": "red",
       },
-      selectedNodeStyle: {
-        "background-color": "brown", // Designer's concern
-        "background-fill": "solid",
-      },
+
+      // selectedNodeStyle: {
+      //   "background-color": "brown", // Designer's concern
+      //   "background-fill": "solid",
+      // },
       // Common Options for expand-collapse plugin
       expandCollapseOptions: {
-        layoutBy: {
-          name: "cose-bilkent", //"cose-bilkent" was very good for stopping funny bouncing //"cise",
-          animate: "end",
-          randomize: false,
-          fit: true,
-        },
+        // layoutBy: {
+        //   name: "cose-bilkent", //"cose-bilkent" was very good for stopping funny bouncing //"cise",
+        //   animate: "end",
+        //   randomize: false,
+        //   fit: true,
+        // },
         // undoable: false, // if set to false, no need for installing plugin. If true, plugin have to be installed
         // expandCueImage: "",
         // collapseCueImage: "",
-        animate: "end",
+        animate: false,
         zIndex: 0,
       },
+
       isMouseDown: false,
+
       toolbarItems: {
-        graphLocatorGroup: {
-          controlList: {
-            showGraphLocator: {
-              // Zoom In
-              type: "button",
-              action: function () {
-                // self.showGraphLocator = true;
-                self.showGraphLocator = !self.showGraphLocator;
-                // console.log("Zoom In");
-              },
-              disabled: false,
-              // icon: "mdi-graph-outline",
-              iconClass: "base-custom-icon graph-locator-icon",
-              tooltip: "Show/Hide Graph locator",
-            },
-          },
-        },
         zoomGroup: {
           // Zoom Buttons
           // name: "zoomGroup",
@@ -790,56 +1087,31 @@ export default {
             },
           },
         },
-        collapseExpandGroup: {
-          // Collapse Expand
-          // name: "collapseExpandGroup",
-          controlList: {
-            collapse: {
-              // Collapse Selected Node
-              type: "button",
-              action() {
-                self.collapseNode();
-                // console.log("Collapse Node");
-              },
-              disabled: true,
-              icon: "mdi-arrow-collapse",
-              tooltip: "Collapse selected node",
-            },
-            expand: {
-              // Expand Selected Node
-              type: "button",
-              action() {
-                self.expandNode();
-                // console.log("Expand Node");
-              },
-              disabled: true,
-              icon: "mdi-arrow-expand",
-              tooltip: "Expand selected node",
-            },
-            collapseAll: {
-              // Collapse All Node(s)
-              type: "button",
-              icon: "mdi-arrow-collapse-all",
-              tooltip: "Collapse all Node(s)",
-              action() {
-                self.collapseAllNodes();
-                // console.log("Expand All Node(s)");
-              },
-              disabled: true,
-            },
-            expandAll: {
-              // Expand All Node(s)
-              type: "button",
-              icon: "mdi-arrow-expand-all",
-              tooltip: "Expand all Node(s)",
-              action() {
-                self.expandAllNodes();
-                // console.log("Expand All Node(s)");
-              },
-              disabled: true,
-            },
-          },
-        },
+        // expandCollapseGroup: {
+        //   // expand-collapse Buttons
+        //   controlList: {
+        //     collapse: {
+        //       // Collapse
+        //       type: "button",
+        //       action: function () {
+        //         self.collapseNode();
+        //       },
+        //       disabled: true,
+        //       icon: "mdi-minus-box",
+        //       tooltip: "Collapse selected node",
+        //     },
+        //     expand: {
+        //       // Zoom Out
+        //       type: "button",
+        //       action: function () {
+        //         self.expandNode();
+        //       },
+        //       disabled: true,
+        //       icon: "mdi-plus-box",
+        //       tooltip: "Expand selected node",
+        //     },
+        //   },
+        // },
         nodeFilterGroup: {
           // Node Filter
           // name: "nodeFilterGroup",
@@ -853,88 +1125,19 @@ export default {
               text: "",
               placeholder: "Filter Nodes",
             },
-            showInfo: {
-              // Zoom In
-              type: "button",
-              action: function () {
-                self.showInfoBoard = true;
-                // console.log("Zoom In");
-              },
-              disabled: false,
-              icon: "mdi-text-box-outline",
-              icon: "mdi-information-variant", //, "mdi-information-outline", "mdi-text-box-outline"
-              tooltip: "Show Node Info",
-            },
-          },
-        },
-        // Decided to remove the depth field as it can hit performance when choosing high values for depth
-        // depthGroup: {
-        //   // name: "depthGroup",
-        //   controlList: {
-        //     graphDepth: {
-        //       type: "slider",
-        //       // action: function () {
-        //       // },
-        //       label: "Graph Depth",
-        //       value: 1,
-        //       disabled: false,
-        //       text: "",
-        //       placeholder: "Filter Nodes",
-        //     },
-        //     // graphLayout: {
-        //     //   type: "selection",
-        //     //   disabled: false,
-        //     //   label: "Graph Layout",
-        //     //   itemList: cytoscapeLayoutList,
-        //     //   selectedItem: cytoscapeLayoutList[11].name,
-        //     // },
-        //   },
-        // },
-        // TEST DATASET
-        // testDatasetGroup: {
-        //   // name: "testDatasetGroup",
-        //   controlList: {
-        //   useTestDataset: {
-        //     type: "switch",
-        //     // action: function () {
-        //     // },
-        //     label: "Use Test Data",
-        //     value: true,
-        //     disabled: false,
-        //   },
-        //   dictionaryWordSelection: {
-        //     type: "selection",
-        //     disabled: false,
-        //     label: "Test Data",
-        //     itemList: dictionaryWordList,
-        //     selectedItem: dictionaryWordList[0],
-        //   },
-        //   layoutParams: {
-        //     // Show Layout
-        //     type: "switch",
-        //     label: "Params?",
-        //     value: false,
-        //     disabled: false,
-        //   },
-        //   },
-        // },
-        // END of TEST DATASET
-        reloadGroup: {
-          // name: "reloadGroup",
-          controlList: {
-            reload: {
-              type: "button",
-              showBadge: false,
-              action: function () {
-                console.log("Reload");
-                // Reload Data
-                self.loadGraph();
-                //self.loadDatasetGraph();
-              },
-              disabled: true,
-              icon: "mdi-reload",
-              tooltip: "Reload Graph",
-            },
+            // showInfo: {
+            //   // Zoom In
+            //   type: "button",
+            //   action: function () {
+            //     self.toggleInfoBoard();
+            //     // self.showInfoBoard = true;
+            //     // console.log("Zoom In");
+            //   },
+            //   disabled: false,
+            //   icon: "mdi-text-box-outline",
+            //   icon: "mdi-information-variant", //, "mdi-information-outline", "mdi-text-box-outline"
+            //   tooltip: "Show Node Info",
+            // },
           },
         },
         screenshotGroup: {
@@ -956,370 +1159,192 @@ export default {
         visorsGroup: {
           controlList: {
             visorsList: {
-              speedDial: true, // New type for speedDial
-              type: "speedDial",
-              expanded: false, // passed to v-model for controlling its state
+              type: "toggleButton",
               disabled: false,
-              multiple: true, //
-              tooltip: "View the graph in different figures",
-              //icon:""
-              iconClass: "base-custom-icon visor-icon",
-              activeVisorList: [], // List for active visors
-              buttonList: {
-                flagVisor: {
-                  type: "toggle", // valid types: "button", "toggle"
-                  action: function (state) {
-                    // TODO: This ugly way of data access:( Can we try to revamp it in the future?
-                    self.toolbarItems.visorsGroup.controlList.visorsList.buttonList.flagVisor.on = !self
-                      .toolbarItems.visorsGroup.controlList.visorsList
-                      .buttonList.flagVisor.on;
-                    if (
-                      self.toolbarItems.visorsGroup.controlList.visorsList
-                        .buttonList.flagVisor.on
-                    ) {
-                      activeVisorList.push("flagVisor");
-                    } else {
-                      activeVisorList.splice(
-                        activeVisorList.indexOf("flagVisor"),
-                        1
-                      );
-                    }
-                    self.updateVisors(); // Update Visors
-                  },
-                  disabled: true,
-                  on: true, // valid values "true", or "false"
-                  icon: "mdi-flag-variant", // Priority for property "icon" if defined. Then it comes to "iconClass" if "icon" is not defined
-                  // iconClass: "base-custom-icon flag-visor-icon",
+              selected: undefined, // Selected button
+              buttonList: [
+                {
+                  type: "flag",
+                  icon: "mdi-flag-variant-outline",
                   tooltip:
                     "Apply flag visor: Show country origins of URLs represented by flags in nodes",
-                  style: {
-                    "background-offset-x": "-50%",
-                    "background-offset-y": "50%",
-                    "background-image-sub-path": "images/countryFlags/64/",
-                    // "background-image-sub-path": require(`~/assets/images/fileTypes/`),
-                    //                   require(`~/assets/images/fileTypes/iconfinder/selective/${node.data(
-                    //   "fileType"
-                    // )}.png`)
-                    // "background-clip": "none", // values: "node", or "none"
-                    // "background-fit": "none", // values: "none","contain", or "cover"
-                    // "background-width": "50%", // "backkground-fit" should have "none" for working
-                    // "background-height": "50%", // "backkground-fit" should have "none" for working
-                  },
                 },
-                fileTypeVisor: {
-                  type: "toggle",
-                  action: function (state) {
-                    // this.on = !this.on;
-                    // toggleVisor("fileTypeVisor", this.on);
-                    // TODO: This ugly way of data access:( Can we try to revamp it in the future?
-                    self.toolbarItems.visorsGroup.controlList.visorsList.buttonList.fileTypeVisor.on = !self
-                      .toolbarItems.visorsGroup.controlList.visorsList
-                      .buttonList.fileTypeVisor.on;
-                    if (
-                      self.toolbarItems.visorsGroup.controlList.visorsList
-                        .buttonList.fileTypeVisor.on
-                    ) {
-                      activeVisorList.push("fileTypeVisor");
-                    } else {
-                      activeVisorList.splice(
-                        activeVisorList.indexOf("fileTypeVisor"),
-                        1
-                      );
-                    }
-                    self.updateVisors(); // Update Visors
-                  },
-                  disabled: true,
-                  on: true, // valid values "true", or "false"
-                  icon: "mdi-file-outline",
-                  // iconClass: "base-custom-icon file-type-visor-icon",
-                  tooltip:
-                    "Apply file type Visor: Show file type of url by file type icons in nodes",
-                  style: {
-                    "background-offset-x": "50%",
-                    "background-offset-y": "50%",
-                    "background-image-sub-path": "images/fileTypes/",
-                    // "background-image-sub-path": require(`~/assets/images/fileTypes/`),
-                    //                   require(`~/assets/images/fileTypes/iconfinder/selective/${node.data(
-                    //   "fileType"
-                    // )}.png`)
-                    // "background-clip": "none", // values: "node", or "none"
-                    // "background-fit": "none", // values: "none","contain", or "cover"
-                    // "background-width": "50%", // "backkground-fit" should have "none" for working
-                    // "background-height": "50%", // "backkground-fit" should have "none" for working
-                  },
+                {
+                  type: "favicon",
+                  label: "FAV",
+                  // icon: "mdi-movie-roll",
+                  tooltip: "Apply favicon Visor: show favicon of website",
                 },
-              },
+              ],
             },
           },
         },
         pathFindersGroup: {
           controlList: {
-            findersList: {
-              speedDial: true,
-              type: "speedDial",
-              expanded: false, // passed to v-model for controlling its state
+            pathFindersList: {
+              type: "toggleButton",
               disabled: false,
-              multiple: true, //
-              tooltip: "Use differet finders for finding different pathes",
-              //icon:""
-              iconClass: "base-custom-icon path-finder-group-icon",
-              buttonList: {
-                pathFinder: {
-                  type: "button",
-                  action: function () {
-                    // Toggle visibility of path finder menu
-                    self.togglePathFinderTool();
-                  },
-                  disabled: false,
-                  // icon: "mdi-map-marker-path",
+              selected: undefined, // Selected button
+              buttonList: [
+                {
+                  // icon: "mdi-flag-variant-outline",
+                  type: "path",
                   iconClass: "base-custom-icon path-finder-icon",
                   tooltip: "Find path between two nodes",
                 },
-                loopFinder: {
-                  type: "button",
-                  action: function () {},
-                  disabled: false,
-                  // icon: "mdi-graphql",
+                {
+                  // icon: "mdi-movie-roll",
+                  type: "loop",
                   iconClass: "base-custom-icon loop-finder-icon",
                   tooltip: "Find loop(s) if exist(s)",
                 },
-              },
+              ],
             },
           },
         },
-        settingsGroup: {
-          // Settings
-          // name: "settingsGroup",
-          controlList: {
-            settings: {
-              type: "button",
-              action: function (eventObject) {
-                // Prevent event propagation
-                eventObject.stopPropagation();
-                self.openSettingsDialog();
-                // console.log("Open Settings");
-              },
-              disabled: false,
-              icon: "mdi-cog",
-              tooltip: "Open Settings",
-            },
-          },
-        },
-        // Decided to move the position to another place after discussion with designer
-        // timelineGroup: {
-        //   controlList: {
-        //     timeline: {
-        //       type: "button",
-        //       action: function () {
-        //         // self.startTimeline();
-        //         self.activateTimeline();
-        //       },
-        //       disabled: false,
-        //       icon: "mdi-chart-timeline-variant", //"mdi-timeline-clock-outline"
-        //       tooltip: "Start Timeline Animation",
-        //     },
-        //   },
-        // },
-        // hideGroup: {
-        //   // name: "hideGroup",
-        //   controlList: {
-        //     hide: {
-        //       type: "button",
-        //       action: function () {
-        //         // console.log("Hide");
-        //         self.setToolbarVisibility(false);
-        //       },
-        //       disabled: false,
-        //       icon: "mdi-close",
-        //       tooltip: "Hide Toolbar",
-        //     },
-        //   },
-        // },
       },
-
-      // TODO: This data structure is going to be removed since we have moved this part into toolbar item
-      finderAndVisorItems: {
-        disabled: false,
-        items: {
-          // Finder items in the menu
-          finders: {
-            multiple: false, // Allow multiple buttons to be active
-            // previouslySelected: undefined, // Previously Selected Finder
-            selected: undefined, // Single Selected Finder
-            items: [
-              // Launch a tool for finding path from node to node
-              {
-                type: "pathFinder",
-                icon: "mdi-map-marker-path",
-                tooltip: "Find a path from a node to another node",
-                // action: function () {
-                // self.enablePathFinderTool(selected === 1 ? true : false);
-                // if (selected === 1) {
-                //   // Path Finder Tool is on
-                //   self.enablePathFinderTool(true);
-                // } else {
-                //   self.enablePathFinderTool(false);
-                // }
-                // },
-              },
-              // Launch a tool for showing loops in the graph
-              {
-                type: "loopFinder",
-                icon: "mdi-graphql",
-                tooltip: "Find a loop in the graph",
-                // action: function () {
-                // self.enableLoopFinderTool(selected === 1 ? true : false);
-                // },
-              },
-            ],
-          },
-          // Visor Items
-          visors: {
-            multiple: true, // Allow multiple buttons to be active
-            // previouslySelected: [],
-            selected: [], // Selected visor(s)
-            // orderedActiveVisors: [], // Ordered Active Visors
-
-            items: [
-              // File type visor
-              {
-                type: "fileVisor",
-                icon: "mdi-file-eye",
-                tooltip: "Show file type",
-                style: {
-                  "background-offset-x": "50%",
-                  "background-offset-y": "50%",
-                  "background-image-sub-path": "images/fileTypes/",
-                  // "background-image-sub-path": require(`~/assets/images/fileTypes/`),
-                  //                   require(`~/assets/images/fileTypes/iconfinder/selective/${node.data(
-                  //   "fileType"
-                  // )}.png`)
-                  // "background-clip": "none", // values: "node", or "none"
-                  // "background-fit": "none", // values: "none","contain", or "cover"
-                  // "background-width": "50%", // "backkground-fit" should have "none" for working
-                  // "background-height": "50%", // "backkground-fit" should have "none" for working
-                },
-                // layerIndex: -1, // Indicate the index of the visor laid on the node
-                // action: function () {
-                // self.toggleFileVisor();
-                // },
-              },
-              // Flag Visor
-              {
-                type: "flagVisor",
-                icon: "mdi-flag-variant",
-                tooltip: "Show country flag",
-                style: {
-                  "background-offset-x": "-50%",
-                  "background-offset-y": "50%",
-                  "background-image-sub-path": "images/countryFlags/64/",
-                  // "background-image-sub-path": require(`~/assets/images/countryFlags/64/`),
-                  // "background-clip": "none", // values: "node", or "none"
-                  // "background-fit": "none", // values: "none","contain", or "cover"
-                  // "background-width": "50%", // "backkground-fit" should have "none" for working
-                  // "background-height": "50%", // "backkground-fit" should have "none" for working
-                },
-                // layerIndex: -1, // Indicate the index of the visor laid on the node
-                // action: function () {
-                //   self.toggleFlagVisor();
-                // },
-              },
-            ],
-          },
-        },
-      },
-      // END of CONCEPT
-
-      // Abstract Data for visors. TODO: It should be revamped in the future
-      // visors: [{}, {}],
 
       showGraphLocator: true,
-      showRightToolbar: false,
-      // showUpperToolbar: false,
       showInfoBoard: false,
-      showFinderTool: false,
-      // TODO: Double-check that you no longer need this variable
-      // showTimelineUI: false,
-      showSettingsDialog: false,
+      // showFinderTool: false,
+      selectedFinder: null, // valid values: 'path', 'loop', and null
+      showSettings: false,
       progressDialogShown: false,
-      // Dataset TEST
-      // showDataset: false,
-      useTestDataset: false,
-      datasetKeyword: "",
-      // Selected Layout Option Parameters
-      selectedLayoutParams: {
-        name: "cise",//cytoscapeLayoutList[11].name,
-        // padding: 17,
-      },
 
-      // // Layout Params
-      // showLayoutParams: false,
-      // // END of Layout Params
-
-      // End of Dataset TEST
       // Hold search tree for navigation and selecting a graph
       searchTreeItems: [],
       selectedSnapshotList: [], // Selected snapshot list in the tree
 
-      // graphLocatorMode: "timeline", // values: "singleSnapshot", "timeline"
-      selectedGraphLocatorModeIndex: 0, // selected graph locator mode
-      selectableGraphLocator: false,
-      enableStartBuildingTimelineButton:false,
       // Use RangedValue for holding pairs for calculating minimum and maximum for some values
       inlinkCountMinMaxPair: null,
       outlinkCountMinMaxPair: null,
+
+      cxtmenu1: undefined,
+      cxtmenu2: undefined,
     };
   },
 
   watch: {
-    // // Watch for changes in finders toggling
-    // "finderAndVisorItems.items.finders.selected": {
-    //   immediate: true,
-    //   handler(val, oldVal) {
-    //     // Only one finder is active
-    //     // Check for "oldVal" if it was an active finder
-    //     if (oldVal !== undefined) {
-    //       switch (this.finderAndVisorItems.items.finders.items[oldVal].type) {
-    //         case "pathFinder":
-    //           this.enablePathFinderTool(false);
-    //           break;
-
-    //         case "loopFinder":
-    //           this.enableLoopFinderTool(false);
-    //           break;
-
-    //         default:
-    //           // In case of unexisted value
-    //           throw new Error("Undefined Finder Type");
-    //           break;
-    //       }
-    //     }
-    //     // Checl for "val" for knowing what the active finder is
-    //     if (val !== undefined) {
-    //       switch (this.finderAndVisorItems.items.finders.items[val].type) {
-    //         case "pathFinder":
-    //           this.enablePathFinderTool(true);
-    //           break;
-
-    //         case "loopFinder":
-    //           this.enableLoopFinderTool(true);
-    //           break;
-
-    //         default:
-    //           // In case of unexisted value
-    //           throw new Error("Undefined Finder Type");
-    //           break;
-    //       }
-    //     }
-    //   },
-    // },
-
-    // Watch for changes in visors toggling
-    "finderAndVisorItems.items.visors.selected": {
+    // watch for the Changes of "viewMode"
+    viewMode: {
       immediate: true,
       handler(val, oldVal) {
-        if (this.cyto) {
-          this.updateVisors();
+        // console.log("watch:viewMode, viewMode =" + this.viewMode);
+        switch (val) {
+          case 0:
+            // Single Snapshot
+            break;
+
+          case 1:
+            // Timeline
+            break;
+        }
+      },
+    },
+
+    // watch for the Changes of "snapshotSelectionMode"
+    snapshotSelectionMode: {
+      immediate: true,
+      handler(val, oldVal) {},
+    },
+
+    // Watch 'selectedNode' for changing style
+    selectedNode: {
+      immediate: true,
+      handler(val, oldVal) {
+        if (oldVal) {
+          // Check if this node isn't a source nor a target
+          // if (
+          //   ((!this.getPathFinderSource) ||
+          //     (this.getPathFinderSource &&
+          //       oldVal.id !== this.getPathFinderSource.id)) &&
+          //   ((!this.getPathFinderTarget) ||
+          //     (this.getPathFinderTarget &&
+          //       oldVal.id !== this.getPathFinderTarget.id))
+          // ) {
+          if (
+            !(
+              (this.getPathFinderSource &&
+                this.getPathFinderSource.id === oldVal.id()) ||
+              (this.getPathFinderTarget &&
+                this.getPathFinderTarget.id === oldVal.id())
+            )
+          ) {
+            this.setNodeStyle(oldVal.id(), this.unselectedNodeStyle);
+            console.log("selectedNode was set back to normal style");
+          }
+          this.setSelectedNodeFlag(false);
+        }
+        if (val) {
+          // Check if this node isn't a source nor a target
+          this.setNodeStyle(val.id(), this.selectedNodeStyle);
+          this.setSelectedNodeFlag(true);
+          // Enable expand-collapse buttons
+          // this.enableExpandButton(true);
+          // this.enableCollapseButton(true);
+        } //else {
+        // Disable expand-collapse buttons
+        // this.enableExpandButton(false);
+        // this.enableCollapseButton(false);
+        //}
+      },
+    },
+
+    // Watch for changes in visors group
+    "toolbarItems.visorsGroup.controlList.visorsList.selected": {
+      immediate: false,
+      handler(val, oldVal) {
+        // Add this condition to avoid
+        if (!this.cyto) {
+          return;
+        }
+        // if (oldVal !== undefined) {
+        //   // Close the activated visor
+        //   this.deactivateVisor(
+        //     this.toolbarItems.visorsGroup.controlList.visorsList.buttonList[
+        //       this.toolbarItems.visorsGroup.controlList.visorsList.selected
+        //     ]
+        //   );
+        // }
+        // if (val !== undefined) {
+        //   // Activate the selected visor
+        //   this.activateVisor(
+        //     this.toolbarItems.visorsGroup.controlList.visorsList.buttonList[
+        //       this.toolbarItems.visorsGroup.controlList.visorsList.selected
+        //     ]
+        //   );
+        // }
+        if (val !== undefined) {
+          this.activateVisor(
+            this.toolbarItems.visorsGroup.controlList.visorsList.buttonList[
+              this.toolbarItems.visorsGroup.controlList.visorsList.selected
+            ].type
+          );
+        } else {
+          // Clear any visors
+          this.clearVisors();
+        }
+        // console.log('toolbarItems.visorsGroup.controlList.visorsList.selected = ' + this.toolbarItems.visorsGroup.controlList.visorsList.selected)
+      },
+    },
+
+    // Watch for changes in finders group
+    "toolbarItems.pathFindersGroup.controlList.pathFindersList.selected": {
+      immediate: true,
+      handler(val, oldVal) {
+        if (oldVal !== undefined) {
+          // Close the activated visor
+          this.closeFinder(
+            this.toolbarItems.pathFindersGroup.controlList.pathFindersList
+              .buttonList[oldVal].type
+          );
+        }
+        if (val !== undefined) {
+          // Activate the selected visor
+          this.openFinder(
+            this.toolbarItems.pathFindersGroup.controlList.pathFindersList
+              .buttonList[val].type
+          );
         }
       },
     },
@@ -1338,7 +1363,8 @@ export default {
       const color = `rgb(${coloringAction.color.r},${coloringAction.color.g},${coloringAction.color.b})`; // Color object for coloring the node
       const opacity = coloringAction.color.a; // get opacity
       let selected = this.cyto.$(":selected"); // get selected node if exists
-      switch (this.getNodeColoringMethodList[coloringAction.methodIndex]) {
+      // switch (this.getNodeColoringMethodEnum[coloringAction.methodIndex]) {
+      switch (Object.keys(this.getNodeColoringMethodEnum)[Object.values(this.getNodeColoringMethodEnum).indexOf(coloringAction.methodIndex)]) {
         case "all":
           // Color all graph nodes
           this.cyto.$("node").style({
@@ -1356,7 +1382,8 @@ export default {
           }
           break;
 
-        case "selected-node domain":
+        // case "selected-node domain":
+        case "selectedNodeDomain":
           // Color selected node and all other node(s) that has/have the same domain
           if (selected) {
             this.cyto
@@ -1373,7 +1400,7 @@ export default {
           }
           break;
 
-        case "domain-driven":
+        case "domainDriven":
           // TODO: Later, try to create a way for generating discrete color group with maximum distance between colors
           // Perform a random coloring for getting the
           for (const domain in this.nodeDomainCluster) {
@@ -1390,11 +1417,16 @@ export default {
           }
 
           break;
+
+          default:
+            // This shouldn't be reached
+            throw new Error('Undefined node coloring method') 
       }
     },
 
     // Watch for edge coloring type
-    getSelectedEdgeColorTypeIndex: {
+    // getSelectedEdgeColorTypeIndex: {
+    getEdgeColoringMethodCurrentIndex: {
       immediate: true,
       handler(/*val, oldVal*/) {
         if (this.cyto) {
@@ -1404,9 +1436,10 @@ export default {
     },
 
     // Watch for updating node label format
-    getSelectedNodeLabelFormatIndex(index) {
-      switch (this.getNodeLabelFormatList[index]) {
-        case "short":
+    // getSelectedNodeLabelFormatIndex(index) {
+    getNodeLabelFormatCurrentIndex(index) {
+      switch (index) {
+        case this.getNodeLabelFormatEnum.short:
           // The following code fragment doesn't work
           // this.cyto.$("node").style({
           //   'label': 'data(label)',
@@ -1418,10 +1451,9 @@ export default {
               label: node.data("label"), //"data(label)", // Comment part doesn't work
             });
           });
-
           break;
 
-        case "long":
+        case this.getNodeLabelFormatEnum.long:
           // The following code fragment doesn't work
           // this.cyto.$("node").style({
           //   label: "hhgn",
@@ -1437,6 +1469,7 @@ export default {
           break;
 
         default:
+          // NEVER reach this point!!
           throw new Error("Undefined node label format");
           break;
       }
@@ -1453,45 +1486,35 @@ export default {
       // color is the same object used by "v-color-picker" component
     },
 
-    // watch for node size type index
-    getSelectedNodeSizeTypeIndex(index) {
+    getNodeSizeCalcCurrentIndex(index) {
       // TODO: Try to remove this line when fixing conditions
       if (!this.cyto) {
         return;
       }
-      switch (this.getNodeSizeTypeList[index]) {
-        case "uniform":
+      switch (index) {
+        case this.getNodeSizeCalcEnum.uniform:
           // Set all node(s) to be in a uniform size
-          this.updateUniformNodeSize(this.getLatestUniformNodeSizeUsedValue);
+          this.updateUniformNodeSize(this.getUniformNodeSize);
           break;
 
-        // TODO: This type is removed untill its benefit is checked
-        // case "file-size based":
-        //   // TODO: Postpone for now, till you get a better understanding for how to get file size
-        //   break;
-
-        case "inlink-count based":
-          this.updateNodeSizeOnInlinkCountBasis(
-            this.getLatestInlinkCountBasedNodeSizeValue
-          );
+        case this.getNodeSizeCalcEnum.inlinkCount:
+          this.updateNodeSizeOnInlinkCountBasis(this.getInlinkNodeSizeRange);
           break;
 
-        case "outlink-count based":
-          this.updateNodeSizeOnOutlinkCountBasis(
-            this.getLatestOutlinkCountBasedNodeSizeValue
-          );
-          break;
-
+        case this.getNodeSizeCalcEnum.outlinkCount:
+          this.updateNodeSizeOnOutlinkCountBasis(this.getOutlinkNodeSizeRange);
           break;
 
         default:
-          throw new Error("Undefined Node Size Option!!");
+          // Never reach this point!!
+          throw new Error("Undefined Node Size Calculation Enum!!");
           break;
       }
     },
 
     // Watch for uniform size value changes
-    getLatestUniformNodeSizeUsedValue(value) {
+    // getLatestUniformNodeSizeUsedValue(value) {
+    getUniformNodeSize(value) {
       // TODO: Try to remove this line when fixing conditions
       if (!this.cyto) {
         return;
@@ -1500,17 +1523,18 @@ export default {
       this.updateUniformNodeSize(value);
     },
 
-    // TODO: Postpone for now, till you get a better understanding for how to get file size
-    // Watch for File-Size Based for changing node
-    getLatestFileSizeBasedNodeSizeValue(rangedValue) {
-      // TODO: Try to remove this line when fixing conditions
-      if (!this.cyto) {
-        return;
-      }
-    },
+    // // TODO: Postpone for now, till you get a better understanding for how to get file size
+    // // Watch for File-Size Based for changing node
+    // getLatestFileSizeBasedNodeSizeValue(rangedValue) {
+    //   // TODO: Try to remove this line when fixing conditions
+    //   if (!this.cyto) {
+    //     return;
+    //   }
+    // },
 
     // Watch for Inlink-Count Based for changing node
-    getLatestInlinkCountBasedNodeSizeValue(rangedValue) {
+    // getLatestInlinkCountBasedNodeSizeValue(rangedValue) {
+    getInlinkNodeSizeRange(rangedValue) {
       // TODO: Try to remove this line when fixing conditions
       if (!this.cyto) {
         return;
@@ -1519,7 +1543,8 @@ export default {
     },
 
     // Watch for Outlink-Count Based for changing node
-    getLatestOutlinkCountBasedNodeSizeValue(rangedValue) {
+    // getLatestOutlinkCountBasedNodeSizeValue(rangedValue) {
+    getOutlinkNodeSizeRange(rangedValue) {
       // TODO: Try to remove this line when fixing conditions
       if (!this.cyto) {
         return;
@@ -1528,32 +1553,55 @@ export default {
     },
 
     // Watch for node shape index
-    getSelectedNodeShapeIndex(index) {
+    // getSelectedNodeShapeIndex(index) {
+    getNodeShapeCurrentIndex(index) {
       this.cyto.$("node").style({
         shape: this.getNodeShapeList[index],
       });
     },
 
     // Watch source node selection
-    // getPathFinderSource({ id, url }) {
-    //   // start to find path if target is ready
-    //   this.runPathFinderIfReady();
-    // },
     getPathFinderSource: {
       immediate: true,
-      handler(val /*, oldVal*/) {
+      handler(val, oldVal) {
+        console.log("getPathFinderSource, val = ");
+        console.log(val);
+        console.log("getPathFinderSource, oldVal = ");
+        console.log(oldVal);
+        // Restore the style of the previously selected node for path finder target
+        if (oldVal) {
+          this.setNodeStyle(oldVal.id, this.normalNodeStyle);
+        }
+        if (val) {
+          this.setNodeStyle(val.id, this.pathFinderNodeStyle);
+        }
+        if (!(oldVal && val)) {
+          this.setPathFinderMessageType("info");
+        }
+        this.resetPathFinderFoundEdgeList();
         this.runPathFinderIfReady();
       },
     },
 
     // Watch target node selection
-    // getPathFinderTarget({ id, url }) {
-    //   // start to find path if target is ready
-    //   this.runPathFinderIfReady();
-    // },
     getPathFinderTarget: {
       immediate: true,
-      handler(val /*, oldVal*/) {
+      handler(val, oldVal) {
+        console.log("getPathFinderTarget, val = ");
+        console.log(val);
+        console.log("getPathFinderTarget, oldVal = ");
+        console.log(oldVal);
+        // Restore the style of the previously selected node for path finder target
+        if (oldVal) {
+          this.setNodeStyle(oldVal.id, this.normalNodeStyle);
+        }
+        if (val) {
+          this.setNodeStyle(val.id, this.pathFinderNodeStyle);
+        }
+        if (!(oldVal && val)) {
+          this.setPathFinderMessageType("info");
+        }
+        this.resetPathFinderFoundEdgeList();
         this.runPathFinderIfReady();
       },
     },
@@ -1570,83 +1618,100 @@ export default {
       },
     },
 
-    // Watch Graph Locator Mode Index
-    selectedGraphLocatorModeIndex: {
+    // Watch for a request for node data be inquiring by id
+    getRequestNodeIDList: {
       immediate: true,
-      handler(val, oldVal) {
-        // "val" and "oldVal" are indices for the array "getGraphLocatorModeOptionList" in the store
-        if (
-          val === 1 ||
-          oldVal ===
-            1 /* Index of "View Snapshots in Calendar" in "getGraphLocatorModeOptionList" */
-        ) {
-          // Either oldVal was "Snapshot Selection in Tree" or "Timeline", so reload graph locator
-          this.searchTreeItems = [];
-          this.loadVersionCountYearly();
+      handler(val) {
+        // if (val.length > 0) {
+        // The following needs checking its feasibility
+        if (!this.cyto) {
+          return;
         }
-        this.selectableGraphLocator = val === 2;
-        this.enableStartBuildingTimelineButton = this.selectableGraphLocator
+
+        // node ID is set
+        let nodeDataList = [];
+        val.forEach((node) => {
+          let nodeData = {};
+          nodeData.id = node.id;
+          nodeData.url = this.cyto.$(`#${node.id}`).data("url"); // add url to this object
+          nodeData.type = node.type;
+          nodeDataList.push(nodeData);
+        });
+        // You can add more data
+        if (nodeDataList.length > 0) {
+          this.setResponseNodeDataList(nodeDataList);
+        }
+        // }
       },
     },
   },
 
   computed: {
     ...mapGetters({
+      getLoadedGraphFlag: "getLoadedGraphFlag",
       getLinkservRequestURLHub: "getLinkservRequestURLHub",
       getBackgroundColor: "getBackgroundColor",
-      getSelectedNodeSizeTypeIndex: "getSelectedNodeSizeTypeIndex",
-      getNodeSizeTypeList: "getNodeSizeTypeList",
-      getSelectedNodeShapeIndex: "getSelectedNodeShapeIndex",
-      getNodeColoringMethodList: "getNodeColoringMethodList",
-      getGraphLocatorModeOptionList: "getGraphLocatorModeOptionList",
-      getSelectedNodeLabelFormatIndex: "getSelectedNodeLabelFormatIndex",
+      getNodeSizeCalcCurrentIndex: "getNodeSizeCalcCurrentIndex",
+      getNodeSizeCalcEnum: "getNodeSizeCalcEnum",
+      getNodeShapeCurrentIndex: "getNodeShapeCurrentIndex",
+      getNodeColoringMethodEnum: "getNodeColoringMethodEnum",
+      getNodeLabelFormatCurrentIndex: "getNodeLabelFormatCurrentIndex",
       getColoringAction: "getColoringAction",
-      getEdgeColorTypeList: "getEdgeColorTypeList",
+      getEdgeColoringMethodEnum: "getEdgeColoringMethodEnum",
       getEdgeColor: "getEdgeColor",
-      getSelectedEdgeColorTypeIndex: "getSelectedEdgeColorTypeIndex",
-      getNodeLabelFormatList: "getNodeLabelFormatList",
+      getEdgeColoringMethodCurrentIndex: "getEdgeColoringMethodCurrentIndex",
+      getNodeLabelFormatEnum: "getNodeLabelFormatEnum",
       getNodeShapeList: "getNodeShapeList",
-      getLatestUniformNodeSizeUsedValue: "getLatestUniformNodeSizeUsedValue",
-      getLatestFileSizeBasedNodeSizeValue:
-        "getLatestFileSizeBasedNodeSizeValue",
-      getLatestInlinkCountBasedNodeSizeValue:
-        "getLatestInlinkCountBasedNodeSizeValue",
-      getLatestOutlinkCountBasedNodeSizeValue:
-        "getLatestOutlinkCountBasedNodeSizeValue",
+      getUniformNodeSize: "getUniformNodeSize",
+      getInlinkNodeSizeRange: "getInlinkNodeSizeRange",
+      getOutlinkNodeSizeRange: "getOutlinkNodeSizeRange",
       getPathFinderSource: "getPathFinderSource",
       getPathFinderTarget: "getPathFinderTarget",
       getUseDifferentStyleForExtEdges: "getUseDifferentStyleForExtEdges",
+      getRequestNodeIDList: "getRequestNodeIDList",
     }),
 
-    // Return type of finder
-    selectedFinderType() {
-      return this.finderAndVisorItems.items.finders.selected != undefined
-        ? this.finderAndVisorItems.items.finders.items[
-            this.finderAndVisorItems.items.finders.selected
-          ].type
-        : "";
-    },
+    // // Return type of finder
+    // selectedFinderType() {
+    //   // return this.finderAndVisorItems.items.finders.selected !== undefined
+    //   //   ? this.finderAndVisorItems.items.finders.items[
+    //   //       this.finderAndVisorItems.items.finders.selected
+    //   //     ].type
+    //   //   : "";
+    //   return "";
+    // },
   },
 
   methods: {
     // Actions of veux
     ...mapActions({
+      setLoadedGraphFlag: "setLoadedGraphFlag",
+      setSelectedNodeFlag: "setSelectedNodeFlag",
       setLinkservRequestURLHub: "setLinkservRequestURLHub",
       setProgressIndicatorVisibility: "setProgressIndicatorVisibility",
       setProgressIndicatorMessage: "setProgressIndicatorMessage",
       setPathFinderSource: "setPathFinderSource",
       setPathFinderTarget: "setPathFinderTarget",
       setPathFinderResult: "setPathFinderResult",
+      // setPathFinderMessage: "setPathFinderMessage",
+      setPathFinderMessageType: "setPathFinderMessageType",
+      setResponseNodeDataList: "setResponseNodeDataList",
     }),
+
+    setMaximumDepth(value) {
+      this.maximumDepth_NEW = value;
+    },
+
+    setTimeElasticity(value) {
+      this.timeElasticity = value;
+    },
 
     // Setup after entering a new URL
     setupURL(url) {
       this.targetURL = url; // Get URL from route
 
       // Get the SSURT format from url
-      let targetURLInSSURTObject = ssurt.regularURLToSSURT(
-        this.targetURL
-      );
+      let targetURLInSSURTObject = ssurt.regularURLToSSURT(this.targetURL);
       if (targetURLInSSURTObject.error.length === 0) {
         this.targetURLInSSURT = targetURLInSSURTObject.ssurt;
       } else {
@@ -1654,11 +1719,14 @@ export default {
         console.error("Your ssurt function has errors");
         return;
       }
-      console.log(this.targetURLInSSURT);
-      this.setLinkservRequestURLHub({
-        ssurtURL: this.targetURLInSSURT,
-        linkservHostname: this.$config.linkservHostname,
-      });
+      console.log(
+        "Inside setupURL,  this.targetURLInSSURT : " + this.targetURLInSSURT
+      );
+      // this.setLinkservRequestURLHub({
+      //   ssurtURL: this.targetURLInSSURT,
+      //   linkservHostname: this.$config.linkservHostname,
+      // });
+      this.setLinkservRequestURLHub(this.$config.linkservHostname);
     },
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -1666,8 +1734,30 @@ export default {
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     // Update edge color completely
     updateEdgeColor() {
-      switch (this.getEdgeColorTypeList[this.getSelectedEdgeColorTypeIndex]) {
-        case "uniform":
+      // switch (this.getEdgeColorTypeList[this.getSelectedEdgeColorTypeIndex]) {
+      //   case "uniform":
+      //     // Color All edges with uniform color
+      //     this.cyto.$("edge").style({
+      //       // "line-color": `rgb(${this.getEdgeColor.rgba.r},${this.getEdgeColor.rgba.g},${this.getEdgeColor.rgba.b})`,
+      //       "line-color": `hsl(${this.getEdgeColor.h},${
+      //         this.getEdgeColor.s * 100
+      //       }%,${this.getEdgeColor.l * 100}%)`,
+      //     });
+      //     break;
+
+      //   case "domain name & depth":
+      //     // Here we need to perform traversing for all edges starting from root node
+      //     this.updateEdgeColorUponDomainAndDepthBasis();
+      //     break;
+
+      //   default:
+      //     // Never reach this point!!
+      //     throw new Error("Undefined Edge Color Type");
+      //     break;
+      // }
+      // switch (this.getSelectedEdgeColorTypeIndex) {
+      switch (this.getEdgeColoringMethodCurrentIndex) {
+        case this.getEdgeColoringMethodEnum.uniform:
           // Color All edges with uniform color
           this.cyto.$("edge").style({
             // "line-color": `rgb(${this.getEdgeColor.rgba.r},${this.getEdgeColor.rgba.g},${this.getEdgeColor.rgba.b})`,
@@ -1677,14 +1767,14 @@ export default {
           });
           break;
 
-        case "domain name & depth":
+        case this.getEdgeColoringMethodEnum.domainNameAndDepth:
           // Here we need to perform traversing for all edges starting from root node
           this.updateEdgeColorUponDomainAndDepthBasis();
           break;
 
         default:
           // Never reach this point!!
-          throw new Error("Undefined Edge Color Type");
+          throw new Error("Undefined Edge Coloring Method");
           break;
       }
     },
@@ -1700,53 +1790,102 @@ export default {
 
     // Update node size according to inlink-count basis
     updateNodeSizeOnInlinkCountBasis(minMaxSizeArray) {
-      let sizeMinMaxPair = new MinMaxPair(
-        minMaxSizeArray[0],
-        minMaxSizeArray[1]
-      );
+      if (this.inlinkCountMinMaxPair.diff === 0) {
+        if (this.inlinkCountMinMaxPair.max > 0) {
+          // All nodes have the same inlink count and there is no variance at all
+          // So, handle this case like uniform value
+          this.popupMessage = this.hintTipList.settings.size.noVariance.replace(
+            "{0}",
+            "inlink"
+          );
+          this.popupMessageTitle = "Node Size Calculation";
+          this.showArrowDirection = "right";
+          this.showPopupMessage = true;
+        } else {
+          // There is only one node without any edges!!
+          // So, show the user a warning message
+          this.popupMessage = this.hintTipList.settings.size.nolinks.replace(
+            "{0}",
+            "inlink"
+          );
+          this.popupMessageTitle = "Node Size Calculation";
+          this.showArrowDirection = "right";
+          this.showPopupMessage = true;
+        }
+      } else {
+        let sizeMinMaxPair = new MinMaxPair(
+          minMaxSizeArray[0],
+          minMaxSizeArray[1]
+        );
 
-      this.cyto.$("node").forEach((node) => {
-        // Get Inlinks cout to node
-        let inlinkCount = node.incomers("edge").length;
+        this.cyto.$("node").forEach((node) => {
+          // Get Inlinks cout to node
+          let inlinkCount = node.incomers("edge").length;
 
-        // Calculate Node size based of this formula
-        let size =
-          ((inlinkCount - this.inlinkCountMinMaxPair.min) /
-            this.inlinkCountMinMaxPair.diff) *
-            sizeMinMaxPair.diff +
-          sizeMinMaxPair.min;
+          // Calculate Node size based of this formula
+          let size =
+            ((inlinkCount - this.inlinkCountMinMaxPair.min) /
+              this.inlinkCountMinMaxPair.diff) *
+              sizeMinMaxPair.diff +
+            sizeMinMaxPair.min;
 
-        //Finally, calculate the style
-        node.style({
-          width: size,
-          height: size,
+          //Finally, calculate the style
+          node.style({
+            width: size,
+            height: size,
+          });
         });
-      });
+      }
     },
 
     // Update node size according to outlink-count basis
     updateNodeSizeOnOutlinkCountBasis(minMaxSizeArray) {
-      let sizeMinMaxPair = new MinMaxPair(
-        minMaxSizeArray[0],
-        minMaxSizeArray[1]
-      );
+      if (this.outlinkCountMinMaxPair.diff === 0) {
+        if (this.outlinkCountMinMaxPair.max > 0) {
+          // All nodes have the same outlink count and there is no variance at all
+          // So, handle this case like uniform value
+          this.popupMessage = this.hintTipList.settings.size.noVariance.replace(
+            "{0}",
+            "outlink"
+          );
+          this.popupMessageTitle = "Node Size Calculation";
+          this.showArrowDirection = "right";
+          this.showPopupMessage = true;
+        } else {
+          // There is only one node without any edges!!
+          // So, show the user a warning message
+          this.popupMessage = this.hintTipList.settings.size.noLinks.replace(
+            "{0}",
+            "outlink"
+          );
+          this.popupMessageTitle = "Node Size Calculation";
+          this.showArrowDirection = "right";
+          this.showPopupMessage = true;
+        }
+      } else {
+        let sizeMinMaxPair = new MinMaxPair(
+          minMaxSizeArray[0],
+          minMaxSizeArray[1]
+        );
 
-      this.cyto.$("node").forEach((node) => {
-        // Get outlinks cout to node
-        let outlinkCount = node.outgoers("edge").length;
+        this.cyto.$("node").forEach((node) => {
+          // Get outlinks cout to node
+          let outlinkCount = node.outgoers("edge").length;
 
-        // Calculate Node size based of this formula
-        let size =
-          ((outlinkCount - this.outlinkCountMinMaxPair.min) /
-            this.outlinkCountMinMaxPair.diff) *
-            sizeMinMaxPair.diff +
-          sizeMinMaxPair.min;
-        //Finally, calculate the style
-        node.style({
-          width: size,
-          height: size,
+          // Calculate Node size based of this formula
+          let size =
+            ((outlinkCount - this.outlinkCountMinMaxPair.min) /
+              this.outlinkCountMinMaxPair.diff) *
+              sizeMinMaxPair.diff +
+            sizeMinMaxPair.min;
+
+          //Finally, calculate the style
+          node.style({
+            width: size,
+            height: size,
+          });
         });
-      });
+      }
     },
 
     // Update edge color based on Domain and Depth
@@ -2011,150 +2150,206 @@ export default {
       });
     },
 
+    // Set node with id "nodeID" with a given style "style"
+    setNodeStyle(nodeID, style) {
+      this.cyto.$(`#${nodeID}`).style(style);
+    },
+
+    // Set edge with id "edgeID" with a given style "style"
+    setEdgeStyle(edgeID, style) {
+      this.cyto.$(`#${edgeID}`).style(style);
+    },
+
     //--------------------------------------------------------------------------------------------------------------
     //--------------------------------------------------------------------------------------------------------------
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     //                                          Finders & Visors Actions                                          //
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    // // Open Path Finder Tool
-    enablePathFinderTool(enabled) {
-      console.log("openPathFinderTool is " + enabled);
-      this.showFinderTool = enabled;
-    },
-
-    // Toggle state of path finder visibility
-    togglePathFinderTool() {
-      this.showFinderTool = !this.showFinderTool;
-    },
-
-    // // Open Loop Finder
-    enableLoopFinderTool(enabled) {
-      console.log("openLoopFinderTool is " + enabled);
-      this.showFinderTool = enabled;
-    },
-
-    // Update visor states as they are now consider a state machine
-    updateVisors() {
-      // if (this.finderAndVisorItems.items.visors.selected.length === 0) { // Old condition
-      if (
-        this.toolbarItems.visorsGroup.controlList.visorsList.activeVisorList
-          .length === 0
-      ) {
-        // New condition
-        // All visors are turned off
-        this.cyto.$("node").style({
-          "background-image": "",
-        });
-        // If you need to tune the perfomance, you can try to remove unnecessary properties related to "background-image"
-        // this.cyto.nodes().removeStyle("background-clip background-fit background-width background-height");
-      } else {
-        // Setup style for reflecting changes in visors
-
-        let currentStyle = {
-          // "background-image": [], // Initially empty
-          "background-offset-x": [],
-          "background-offset-y": [],
-
-          "background-clip": [], // values: "node", or "none"
-          "background-fit": [], // values: "none","contain", or "cover"
-          "background-width": [], // "backkground-fit" should have "none" for working
-          "background-height": [], // "backkground-fit" should have "none" for working
-
-          visorType: [],
-        }; // Hold style for changing nodes
-
-        // const fixedAttributeStyle = {
-        //   "background-clip": ["none"], // values: "node", or "none"
-        //   "background-fit": ["none"], // values: "none","contain", or "cover"
-        //   "background-width": ["50%"], // "backkground-fit" should have "none" for working
-        //   "background-height": ["50%"], // "backkground-fit" should have "none" for working
-        // };
-
-        // Loop through all selected visors
-        // this.finderAndVisorItems.items.visors.selected.forEach((visorIndex) => {
-        this.toolbarItems.visorsGroup.controlList.visorsList.activeVisorList.forEach(
-          (visorType) => {
-            // Postpone it till final stage
-            // currentStyle["background-image"].push(
-            //   this.finderAndVisorItems.items.visors.items[visorIndex].style[
-            //     "background-image-sub-path"
-            //   ]
-            // );
-            currentStyle["background-offset-x"].push(
-              // this.finderAndVisorItems.items.visors.items[visorIndex].style[
-              this.toolbarItems.visorsGroup.controlList.visorsList.buttonList[
-                visorType
-              ].style["background-offset-x"]
-            );
-            currentStyle["background-offset-y"].push(
-              // this.finderAndVisorItems.items.visors.items[visorIndex].style[
-              this.toolbarItems.visorsGroup.controlList.visorsList.buttonList[
-                visorType
-              ].style["background-offset-y"]
-            );
-            // Attributes need duplication
-            currentStyle["background-clip"].push("none");
-            currentStyle["background-fit"].push("none");
-            currentStyle["background-width"].push("50%");
-            currentStyle["background-height"].push("50%");
-
-            // Can be omited
-            // No, now it's not omitted
-            // No No 🤣,  can be omitted again
-            currentStyle["visorType"].push(
-              // this.finderAndVisorItems.items.visors.items[visorIndex].type
-              visorType
+    // ++++++++++++++++++++++++++++++++++++ NEW ++++++++++++++++++++++++++++++++++
+    // Activate a visor
+    async activateVisor(type) {
+      switch (type) {
+        case "flag":
+          // Here we'll download the flags for only one time before we proceed
+          if (this.countryFlags.size > 0) {
+            console.log(
+              "activateVisor, starting to download the flags if they are not downloaded"
             );
 
-            // currentStyle = {
-            //   ...this.finderAndVisorItems.items.visors.items[visorIndex].style,
-            // };
+            // Check the first entry in "countryFlags" if the flag is downloaded or not
+            if (!this.countryFlags.values().next().value) {
+              // Download the flags
+              this.setProgressIndicatorVisibility(true);
+              this.setProgressIndicatorMessage("Please wait...");
+              await this.downloadAllFlags();
+              // Use this step if you want to cache the flag data in the node
+              // // Loop through all nodes and assign flags
+              // this.cyto.$("node").forEach((node) => {
+              //   node.data(
+              //     "countryFlag",
+              //     this.countryFlags[node.data("countryCode")]
+              //   );
+              // });
+              this.setProgressIndicatorVisibility(false);
+            }
+            let localThis = this;
+            // Apply the flag style
+            this.cyto.$("node").style({
+              "background-image": function (node) {
+                let arr = []; //
+                let flag = localThis.countryFlags.get(node.data("countryCode"));
+                if (node.data("countryCode") && flag) {
+                  arr.push(localThis.countryFlags.get(flag));
+                }
+                return arr;
+              },
+              "background-fit": "cover",
+            });
+          } else {
+            // Show an info to the user that there is no flags
           }
-        );
+          break;
 
-        currentStyle["bounds-expansion"] = "20px"; // Add this one time only
-
-        let { visorType, ...partialCurrentStyle } = currentStyle;
-        this.cyto.$("node").style({
-          ...partialCurrentStyle,
-          "background-image": function (node) {
-            let arr = []; //
-            // let arr = currentStyle["background-image"]; // hold the background images
-
-            // Make another loop through all selected visors
-            // this.finderAndVisorItems.items.visors.selected.forEach(
-            //   (visorIndex) => {}
-            // );
-            // Replaced with better code
-            currentStyle["visorType"].forEach((visorType) => {
-              switch (visorType) {
-                case "fileTypeVisor":
-                  arr.push(
-                    require(`~/assets/images/fileTypes/${node.data(
-                      "fileType"
-                    )}.png`)
-                  );
-                  break;
-
-                case "flagVisor":
-                  arr.push(
-                    require(`~/assets/images/countryFlags/64/${node.data(
-                      "countryCode"
-                    )}.png`)
-                  );
-                  break;
-
-                default:
-                  // Invalid Point to reach!!
-                  throw new Error("Undefined Visor Type!!");
-                  break;
+        case "favicon":
+          // Download all favicon here for only one time
+          if (!Object.values(this.nodeDomainCluster)[0].favicon) {
+            this.setProgressIndicatorVisibility(true);
+            this.setProgressIndicatorMessage("Please wait...");
+            for (const domain in this.nodeDomainCluster) {
+              this.nodeDomainCluster[domain].favicon =
+                await this.downloadFavicon_NEW(domain);
+            }
+            // Loop through all nodes and assign favicon
+            this.cyto.$("node").forEach((node) => {
+              if (node.data("domain")) {
+                node.data(
+                  "favicon",
+                  this.nodeDomainCluster[node.data("domain")].favicon
+                );
               }
             });
-            return arr;
-          },
-        });
+            this.setProgressIndicatorVisibility(false);
+          }
+          this.cyto.$("node").style({
+            "background-image": function (node) {
+              let arr = []; //
+              if (node.data("favicon")) {
+                arr.push(node.data("favicon"));
+              }
+              return arr;
+            },
+            "background-fit": "cover",
+          });
+          break;
+
+        default:
+          break;
       }
+    },
+
+    // +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+    // ++++++++++++++++++++++++++++++++++++ NEW ++++++++++++++++++++++++++++++++++
+    // //Deavtivate an activated visor
+    // deactivateVisor(type) {},
+    // +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+    // ++++++++++++++++++++++++++++++++++++ NEW ++++++++++++++++++++++++++++++++++
+    clearVisors() {
+      // All visors are turned off
+      this.cyto.$("node").style({
+        "background-image": "",
+      });
+    },
+
+    // Open a finder
+    openFinder(type) {
+      this.selectedFinder = type;
+      if (type === "loop") {
+        this.popupMessage =
+          "Currently, loop finder is not implemented. It will available soon";
+        this.popupMessageTitle = "Loop Finder";
+        this.showArrowDirection = null;
+        this.showPopupMessage = true;
+
+        // Close the finder
+        setTimeout(() => {
+          this.toolbarItems.pathFindersGroup.controlList.pathFindersList.selected =
+            undefined;
+        }, 100);
+      }
+
+      // switch (type) {
+      //   case 'path':
+
+      //     break;
+
+      //   case 'loop':
+      //     break;
+
+      //   default:
+      //     // Never reach this point!!
+      //     throw new Error("Unable to open undefined finder");
+      //     break;
+      // }
+      // For now, open the path finder tool
+      // this.showFinderTool = true;
+
+      // switch (type) {
+      //   case 'path':
+
+      //     break;
+
+      //   case 'loop':
+      //     break;
+
+      //   default:
+      //     break;
+      // }
+    },
+
+    // Close an opened finder
+    closeFinder(type) {
+      // Perform a cleanup for data initialized by finder
+      switch (type) {
+        case "path":
+          this.resetPathFinderFoundEdgeList();
+          this.setPathFinderMessageType("info"); // Reset message
+          if (this.getPathFinderSource) {
+            this.setPathFinderSource(null);
+          }
+          if (this.getPathFinderTarget) {
+            this.setPathFinderTarget(null);
+          }
+          break;
+        case "loop":
+          break;
+
+        default:
+          // Never reach this point!!
+          throw new Error("Unable to open undefined finder");
+          break;
+      }
+      this.selectedFinder = null; // Set it to null
+      // For now, close the path finder tool
+      // this.showFinderTool = false;
+    },
+
+    // Hide finder tool
+    hidePathFinderTool() {
+      this.toolbarItems.pathFindersGroup.controlList.pathFindersList.selected =
+        undefined;
+      // this.closeFinder('path')
+      // this.resetPathFinderFoundEdgeList();
+      // this.showFinderTool = false;
+      // this.setPathFinderMessageType("info"); // Reset message
+      // if (this.getPathFinderSource) {
+      //   this.setPathFinderSource(null)
+      // }
+      // if (this.getPathFinderTarget) {
+      //   this.setPathFinderTarget(null)
+      // }
     },
 
     // Setup a flag for node selection
@@ -2205,64 +2400,46 @@ export default {
       let srcNode = this.cyto.$(`#${sourceNodeID}`);
       // let trgtNode = this.cyto.filter(`[id = "${targetNodeID}" ]`); // Use this line if you have none alpha-numeric characters
       let trgtNode = this.cyto.$(`#${targetNodeID}`);
-      let srcCollection = null;
-      let trgtCollection = null;
+      // let srcCollection = null;
+      // let trgtCollection = null;
 
-      // Handle the case of parent node
+      // // Handle the case of parent node
+      // if (srcNode.isParent()) {
+      //   srcCollection = srcNode.children();
+      // } else {
+      //   srcCollection = srcNode;
+      // }
+      // if (trgtNode.isParent()) {
+      //   trgtCollection = trgtNode.children();
+      // } else {
+      //   trgtCollection = trgtNode;
+      // }
 
-      if (srcNode.isParent()) {
-        srcCollection = srcNode.children();
-      } else {
-        srcCollection = srcNode;
-      }
+      // Check if there is a previous edge list with highlighted edges. If so, reset it to original style
+      this.resetPathFinderFoundEdgeList();
 
-      if (trgtNode.isParent()) {
-        trgtCollection = trgtNode.children();
-      } else {
-        trgtCollection = trgtNode;
-      }
+      // this.pathFinderFoundEdgeList = srcCollection.edgesTo(trgtCollection); // Get egdes
+      let result = this.cyto
+        .elements()
+        .aStar({
+          root: `#${srcNode.id()}`,
+          goal: `#${trgtNode.id()}`,
+          directed: true,
+        });
 
-      // let edgesList = srcNode.edgesTo(trgtNode); // Get egdes
-      let edgeList = srcCollection.edgesTo(trgtCollection); // Get egdes
       // Check if we have got edges
-      if (edgeList.length !== 0) {
-        // Apply animation for showing the paths
-        // edgeList.flashClass('pathFinderIndicator', 2000);
-        // Check this link for creating blinking effect
-        // let ani = edgeList.animation({
-        //   style: {
-        //     // "background-color": "red",
-        //     // width: 75,
-        //     width: 5,
-        //     "line-color": "red", // Designer's TODO
-        //   },
-        //   duration: 2000,
-        // });
-
-        // ani
-        //   .play()
-        //   .promise("completed")
-        //   .then(() => {
-        //     ani.reverse().rewind().play();
-        //   });
-        edgeList
-          .animate({
-            style: {
-              // "background-color": "red",
-              // width: 75,
-              width: 5,
-              "line-color": "red", // Designer's TODO
-            },
-            duration: 2000,
-          })
-          .animate({
-            style: {
-              // style: { "background-color": "yellow" },
-              ...this.normalEdgeStyle,
-            },
-            duration: 2000,
-          });
+      // if (this.pathFinderFoundEdgeList.length !== 0) {
+      if (result.found) {
+        this.pathFinderFoundEdgeList = result.path.filter("edge");
+        // highlight these edges
+        this.pathFinderFoundEdgeList.animate({
+          style: { ...this.pathFinderEdgeStyle },
+          duration: 2000,
+        });
+        this.fitAllNodesToView();
+        this.setPathFinderMessageType("success");
       } else {
+        this.setPathFinderMessageType("warning");
         console.log(`No Path exist for these two nodes`);
       }
     },
@@ -2281,6 +2458,7 @@ export default {
           this.setPathFinderTarget(null);
           break;
 
+        default:
           // Never reach this point!!
           throw new Error(
             "Undefined type while trying to cancel node selection"
@@ -2293,11 +2471,31 @@ export default {
     fitNodeSelectionToView(type) {
       switch (type) {
         case "source":
-          this.cyto.fit(this.cyto.$(`#${this.getPathFinderSource.id}`));
+          this.cyto.animate(
+            {
+              fit: {
+                eles: `#${this.getPathFinderSource.id}`,
+                padding: 20,
+              },
+            },
+            {
+              duration: 1000,
+            }
+          );
           break;
 
         case "target":
-          this.cyto.fit(this.cyto.$(`#${this.getPathFinderTarget.id}`));
+          this.cyto.animate(
+            {
+              fit: {
+                eles: `#${this.getPathFinderTarget.id}`,
+                padding: 20,
+              },
+            },
+            {
+              duration: 1000,
+            }
+          );
           break;
 
         default:
@@ -2307,7 +2505,77 @@ export default {
       }
     },
 
-    //----------------------------------------------------------------------------------------------------------------
+    // Fit all nodes to view
+    fitAllNodesToView() {
+      this.cyto.animate(
+        {
+          fit: {
+            eles: `#${this.getPathFinderSource.id}, #${this.getPathFinderTarget.id}`,
+            padding: 20,
+          },
+        },
+        {
+          duration: 1000,
+        }
+      );
+    },
+
+    // Reset path finder found edge list to its original style
+    resetPathFinderFoundEdgeList() {
+      // If there is a list of edges highlighted, then restore its status to original
+      if (this.pathFinderFoundEdgeList.length > 0) {
+        // highlight these edges
+        this.pathFinderFoundEdgeList.animate({
+          style: { ...this.normalEdgeStyle },
+          duration: 2000,
+        });
+        this.pathFinderFoundEdgeList = []; // Clear the array
+      }
+    },
+
+    // Swap source and target nodes
+    swapSourceAndTargetNodes() {
+      let temp1 = this.getPathFinderSource;
+      let temp2 = this.getPathFinderTarget;
+
+      this.setPathFinderSource(null);
+      this.setPathFinderTarget(null);
+
+      // this.setPathFinderSource(temp2);
+      // this.setPathFinderTarget(temp1);
+      // Use 'setTimeout' to dispatch a task after temporarily setting the source and target to null
+      setTimeout(
+        (temp1, temp2) => {
+          this.setPathFinderSource(temp2);
+          this.setPathFinderTarget(temp1);
+        },
+        200,
+        temp1,
+        temp2
+      );
+    },
+
+    // Toggle the display of info board
+    toggleInfoBoard() {
+      this.showInfoBoard = !this.showInfoBoard;
+    },
+
+    // Fit a node to be zoomed in the viewport
+    fitNode(node) {
+      // this.cyto.fit(`#${nodeID}`)
+      this.cyto.animate(
+        {
+          fit: {
+            eles: node,
+            padding: 20,
+          },
+        },
+        {
+          duration: 1000,
+        }
+      );
+    },
+
     //----------------------------------------------------------------------------------------------------------------
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -2325,232 +2593,173 @@ export default {
       }
     },
 
-    // Enable/Disable collapse selecte/expand buttons according to selection state
-    enableCollapseSelectedExpandSelectedButtons(enabled) {
-      // Collapse all and expand all button should always be enabled when a graph is loaded
-      this.toolbarItems.collapseExpandGroup.controlList.collapse.disabled = !enabled;
-      this.toolbarItems.collapseExpandGroup.controlList.expand.disabled = !enabled;
-    },
+    // // Enable/Disable expand button
+    // enableExpandButton(enabled) {
+    //   this.toolbarItems.expandCollapseGroup.controlList.expand.disabled =
+    //     !enabled;
+    // },
 
-    // Enabe/Disable expand all/ collapse all buttons
-    enableCollapseAllExpandAllButtons(enabled) {
-      this.toolbarItems.collapseExpandGroup.controlList.collapseAll.disabled = !enabled;
-      this.toolbarItems.collapseExpandGroup.controlList.expandAll.disabled = !enabled;
-    },
+    // // Enable/Disable collapse button
+    // enableCollapseButton(enabled) {
+    //   this.toolbarItems.expandCollapseGroup.controlList.collapse.disabled =
+    //     !enabled;
+    // },
 
     // Enable/Disable node filter
     enableNodeFilter(enabled) {
       // this.toolbarItems.nodeFilter.disabled = !enabled;
-      this.toolbarItems.nodeFilterGroup.controlList.nodeFilter.disabled = !enabled;
-    },
-
-    // Enable/Disable text filter
-    // enableDepthSlider(enabled) {
-    //   // this.toolbarItems.depthSlider.disabled = !enabled;
-    //   this.toolbarItems.depthGroup.controlList.graphDepth.disabled = !enabled;
-    // },
-
-    enableReloadButton(enabled) {
-      this.toolbarItems.reloadGroup.controlList.reload.disabled = !enabled;
+      this.toolbarItems.nodeFilterGroup.controlList.nodeFilter.disabled =
+        !enabled;
     },
 
     // Enable/Disable screenshot button
     enableScreenshotButton(enabled) {
-      this.toolbarItems.screenshotGroup.controlList.saveScreenshot.disabled = !enabled;
+      this.toolbarItems.screenshotGroup.controlList.saveScreenshot.disabled =
+        !enabled;
     },
-
-    // Enble/Disable show settings button
-    enableShowSettingsButton(enabled) {
-      this.toolbarItems.settingsGroup.controlList.settings.disabled = !enabled;
-    },
-
-    // Enable/Disable reload button
-    enableReloadButton(enabled) {
-      this.toolbarItems.reloadGroup.controlList.reload.disabled = !enabled;
-    },
-
-    // Eanble "StartTimeline" button
-    // enableStartTimelineButton(enabled) {
-    //   // this.toolbarItems.timelineGroup.controlList.timeline.disabled = !enabled;
-    //   this.enableStartBuildingTimelineButton = enabled
-    // },
-
-    // // Enable/Disable settings button
-    // enableSettingsButton(enabled) {
-    //   this.toolbarItems.settingsGroup.controlList.settings.disabled = !enabled;
-    // },
 
     // Expand selected node
-    expandNode() {
-      // let selectedNode = this.cyto.$(":selected");
-      // if (
-      //   selectedNode.isParent() &&
-      //   this.cytoExpClpAPI.isExpandable(selectedNode)
-      // ) {
-      //   this.cytoExpClpAPI.expand(selectedNode, this.expandCollapseOptions);
-      // }
+    expandNode(node) {
+      // Check that a node is selected and it can be expandable can be expanded
       if (
-        this.selectedNode.isParent() &&
-        this.cytoExpClpAPI.isExpandable(this.selectedNode)
+        /*this.selectedNode &&*/
+        this.cytoExpClpAPI.isExpandable(/*this.selectedNode*/ node)
       ) {
+        // Expand the node and delete it forever
         this.cytoExpClpAPI.expand(
-          this.selectedNode,
+          // this.selectedNode,
+          node,
           this.expandCollapseOptions
         );
+
+        /*this.selectedNode*/ node.children().move({ parent: null });
+        /*this.selectedNode*/ node.remove();
       }
     },
 
     // Collapse selected node
-    collapseNode() {
-      // let selectedNode = this.cyto.$(":selected");
-      // if (
-      //   selectedNode.isParent() &&
-      //   this.cytoExpClpAPI.isCollapsible(selectedNode)
-      // ) {
-      //   this.cytoExpClpAPI.collapse(selectedNode, this.expandCollapseOptions);
-      // }
-      if (
-        this.selectedNode.isParent() &&
-        this.cytoExpClpAPI.isCollapsible(this.selectedNode)
-      ) {
-        this.cytoExpClpAPI.collapse(
-          this.selectedNode,
-          this.expandCollapseOptions
-        );
+    collapseNode(node) {
+      // Check that the node can collapsed
+      // if (this.selectedNode) {
+      // Also check that this node have adjacent nodes whether being coming in or going out
+      let nodes = node //this.selectedNode
+        .outgoers("node")
+        .union(/*this.selectedNode*/ node.incomers("node"));
+      nodes = nodes.union(/*this.selectedNode*/ node); // Add the target node
+      const parentID = generateID("ne") + "_TEMP"; // Generate new ID
+      // Check that the node count is greater than one
+      if (nodes.length > 1) {
+        // Create a parent node for these nodes
+        const nodeObj = {
+          group: "nodes",
+          data: {
+            id: parentID,
+            label: "[collapsed]",
+            specialTemp: true, // This is a temporary attribute for handling two cicular menus
+          },
+        };
+
+        // Add this new node to cytoscape
+        this.cyto.add([nodeObj]); // Add to cytoscape
+        // this.applyStyle();
+
+        // Let these nodes have a reference to their new parent
+        nodes.forEach((node) => {
+          // node.data('parent', parentID)  // This is wrong way ❎
+          node.move({ parent: parentID });
+        });
+
+        // If this parent node has been added successfully, It should be queried direcly
+        let parent = this.cyto.$(`#${parentID}`);
+
+        // Now collapse this node
+        this.cytoExpClpAPI.collapse(parent, this.expandCollapseOptions);
+
+        parent.style(this.collapsedNodeStyle); // Change the style of the node
+        // Add Event listener to this node
+        parent.nodes().on("select", this.onNodeBeingSelected);
+        parent.nodes().on("unselect", this.onNodeBeingUnselected);
+
+        // // TEST
+        // if (this.cyto.$("[id *= '_TEMP']").empty()) {
+        //   console.log('collapseNode, no node returned by selector')
+        // } else {
+        //   console.log('collapseNode, there is/are node(s) returned by selector')
+        // }
+        // // TEST
+
+        // For, now we can try to investigate about the state of 'this.selectedNode'
+        // this.selectedNode = parent; // Set the selection to the parent
       }
-    },
-
-    // Collapse all nodes
-    collapseAllNodes() {
-      // if (this.cytoExpClpAP.getAllCollapsedChildrenRecursively().length > 0) {
-      // TODO: this condition needs refinement
-      this.cytoExpClpAPI.collapseAll(this.expandCollapseOptions);
-      // }
-    },
-
-    // Expand all nodes
-    expandAllNodes() {
-      // if (this.cytoExpClpAP.getAllCollapsedChildrenRecursively().length > 0) { // Maybe the number should be all children nodes count without parents count!!??
-      // TODO: this condition needs refinement
-      this.cytoExpClpAPI.expandAll(this.expandCollapseOptions); // Expand all nodes
       // }
     },
 
     // Add your actions after node selection
     onNodeBeingSelected(eventObject) {
-      // FUTURE TODO: Try to remove some redundant condition(s).
-      // It was added due to unknown behaviour of twice call to this method when selecting node inside compound node
-      if (!this.selectedNode) {
-        this.enableCollapseSelectedExpandSelectedButtons(
-          eventObject.target.isParent()
-        );
-        this.selectedNode = eventObject.target;
-      } else if (this.selectedNode.id() !== eventObject.target.id()) {
-        // if there is a change from parent to child or vice versa, then change the behaviour of
-        this.enableCollapseSelectedExpandSelectedButtons(
-          eventObject.target.isParent()
-        ); // accomodate to new node
-        this.selectedNode = eventObject.target;
-      }
+      this.selectedNode = eventObject.target;
+      console.log(
+        "onNodeBeingSelected, this.selectedNode.id() " + this.selectedNode.id()
+      );
     },
 
     // Add your actions after node unselection
     onNodeBeingUnselected(eventObject) {
-      // FUTURE TODO: Try to remove some redundant condition(s).
-      // It was added due to unknown behaviour of twice call to this method when selecting node inside compound node
-      if (this.selectedNode) {
-        // TODO: You may need to change the style here
-        // Added due to unknown problem
-        this.enableCollapseSelectedExpandSelectedButtons(false);
-        this.selectedNode = null; // Set node unselected
-      }
-      // this.selectedNode.style(this.normalNodeStyle); // Back to normal style
-      // if (this.selectedNode.isParent()) {
-      //   this.enableCollapseSelectedExpandSelectedButtons(false); // Disable collapse
-      // }
-      // this.selectedNode = {}; // Set node unselected
+      this.selectedNode = null;
+      console.log("onNodeBeingUnselected");
     },
 
     // Add your actions after node has the event "grabon"
-    onNodeBeingGrabbedOn(eventObject) {
-      // if (utilities.isObjectEmpty(this.selectedNode)) {
-      //   // No node is selected
-      //   this.cyto.$(`#${eventObject.target.id()}`).json({ selected: true });
-      // } else if (eventObject.target.id() !== this.selectedNode.id()) {
-      //   // Is the selected node the same to node being called by event
-      //   // Set previously selected node to be unselected
-      //   this.cyto.$(`#${this.selectedNode.id()}`).json({ selected: false });
-      //   // Set Node receiving event to be selected
-      //   this.cyto.$(`#${eventObject.target.id()}`).json({ selected: true });
-      //   this.selectedNode = eventObject.target;
-      // }
-      // // eventObject.target.style(this.grabbedNodeStyle);
-      // eventObject.target
-      //   .outgoers("edge")
-      //   .style(this.grabbedNodeOutgoersEdgeStyle);
-      // eventObject.target
-      //   .incomers("edge")
-      //   .style(this.grabbedNodeIncomersEdgeStyle);
-      // .update(); // indicate the end of your new stylesheet so that it can be updated on elements
-    },
+    // onNodeBeingGrabbedOn(eventObject) {
+    // if (utilities.isObjectEmpty(this.selectedNode)) {
+    //   // No node is selected
+    //   this.cyto.$(`#${eventObject.target.id()}`).json({ selected: true });
+    // } else if (eventObject.target.id() !== this.selectedNode.id()) {
+    //   // Is the selected node the same to node being called by event
+    //   // Set previously selected node to be unselected
+    //   this.cyto.$(`#${this.selectedNode.id()}`).json({ selected: false });
+    //   // Set Node receiving event to be selected
+    //   this.cyto.$(`#${eventObject.target.id()}`).json({ selected: true });
+    //   this.selectedNode = eventObject.target;
+    // }
+    // // eventObject.target.style(this.grabbedNodeStyle);
+    // eventObject.target
+    //   .outgoers("edge")
+    //   .style(this.grabbedNodeOutgoersEdgeStyle);
+    // eventObject.target
+    //   .incomers("edge")
+    //   .style(this.grabbedNodeIncomersEdgeStyle);
+    // .update(); // indicate the end of your new stylesheet so that it can be updated on elements
+    // },
 
     // Add your actions after node has the event "dragfreeon"
-    onNodeBeingdragFreeOn(eventObject) {
-      // eventObject.target.style(this.normalNodeStyle);
-      // eventObject.target.outgoers("edge").style(this.normalEdgeStyle);
-      // eventObject.target.incomers("edge").style(this.normalEdgeStyle);
-    },
+    // onNodeBeingdragFreeOn(eventObject) {
+    // eventObject.target.style(this.normalNodeStyle);
+    // eventObject.target.outgoers("edge").style(this.normalEdgeStyle);
+    // eventObject.target.incomers("edge").style(this.normalEdgeStyle);
+    // },
 
     // Filter nodes with typed text in the filter
     updateNodeFilter(text) {
       // this.cyto.nodes().filter("[label @*= '']")
       if (text) {
         // Change all matching node to normal display
-        let matching = this.cyto.nodes().filter(`[label @*= "${text}" ]`);
+        let matching = this.cyto.nodes().filter(`[url @*= "${text}" ]`);
         matching = matching.parent().union(matching);
         // this.cyto.nodes().filter(`[label @*= "${text}" ]`).style({
         matching.style({
-          "background-color": "blue",
+          "background-color": "yellow", //"blue",
           // opacity: 1.0,
         });
         // Change all unmatching node to lower opacity value
         // this.cyto.nodes().filter(`[label !@*= "${text}" ]`).style({
-        let unmatching = this.cyto.nodes().filter(`[label !@*= "${text}" ]`);
+        let unmatching = this.cyto.nodes().filter(`[url !@*= "${text}" ]`);
         unmatching.style({
-          "background-color": "yellow",
+          "background-color": "#999894", //"yellow",
           // opacity: 0.1,
         });
       } else {
-        // Restore all nodes to default opacity
-        this.cyto.nodes().style({
-          "background-color": "yellow",
-          // opacity: 1.0
-        });
+        this.cyto.nodes().style({ ...this.normalNodeStyle });
       }
-
-      // // Second Approach
-      // if (this.toolbarItems.nodeFilter.text != null) {
-      //   console.log("fliter text not null");
-      //   const pattern = new RegExp(this.toolbarItems.nodeFilter.text, "i"); // prepare testing pattern
-      //   this.cyto.nodes().forEach((node) => {
-      //     // console.log('type of node.id : ' + typeof node.id)
-      //     let result = pattern.test(node.id());
-      //     if (!result) {
-      //       // console.log("visible")
-      //       node.style({ display: "none" });
-      //     } else {
-      //       // console.log("invisible")
-      //       node.style({ display: "element" });
-      //     }
-      //   });
-      // } else {
-      //   console.log("fliter text null");
-      //   this.cyto.nodes().forEach((node) => {
-      //     if (node.style("display") === "none") {
-      //       node.style({ display: "element" });
-      //     }
-      //   });
-      // }
     },
 
     // Zoom in on graph
@@ -2565,16 +2774,16 @@ export default {
 
     // Reset Graph View i.e. reset zoom or perform zoom extent
     resetGraphView() {
-      this.cyto.fit();
+      // this.cyto.fit();
       // This is for animation
-      // this.cyto.animate(
-      //   {
-      //     fit: {},
-      //   },
-      //   {
-      //     duration: 1000,
-      //   }
-      // );
+      this.cyto.animate(
+        {
+          fit: {},
+        },
+        {
+          duration: 1000,
+        }
+      );
     },
 
     // Save screenshot
@@ -2594,23 +2803,6 @@ export default {
       // aElement.click();
     },
 
-    // // Start the timeline
-    // startTimeline() {
-    //   // this.showTimelineUI = !this.showTimelineUI;
-    //   // TODO: Show a progress bar for loading all snapshots
-    //   this.activateTimeline();
-    // },
-
-    // Open Settings Dialog
-    openSettingsDialog() {
-      this.showSettingsDialog = true;
-    },
-
-    //----------------------------------------------------------------------------------------------------------------
-
-    //----------------------------------------------------------------------------------------------------------------
-    //                                                    Timeline                                                  //
-    //----------------------------------------------------------------------------------------------------------------
     // Reset data related to timeline
     resetTimeline() {
       this.nodeURLBasedIndexerMap.clear();
@@ -2638,81 +2830,88 @@ export default {
       // First, read the snapshots selected by the user
       this.readTimelineSnapshots();
 
+      let finalNodeList = [];
+      let finalEdgeList = [];
+
       // // Loop through all the snapshots
       for (let index = 0; index < this.timelineSnapshotList.length; index++) {
-        // await this.downloadSnapshot(
-        //   this.timelineSnapshotList[index]
-        // ).then((snapshotData) => this.loadSnapshot(snapshotData, index));
         let snapshotData = await this.downloadSnapshot(
           this.timelineSnapshotList[index]
         );
-        this.loadSnapshot(snapshotData, index);
-      }
-      // The following code didn't work!! Kept for learning and understanding
-      // await this.timelineSnapshotList.forEach(async (snapshot, index) => {
-      //   // 'index' here is the frame index of the timeline
-      //   await this.downloadSnapshot(snapshot).then(async (snapshotData) => {
-      //     // console.log(typeof snapshotData);
-      //     // console.log(snapshotData);
-      //     // console.log('At index ' + index + ', snapshotData : ' + snapshotData)
-      //     console.log("Before dead loop");
-      //     await (async ()=>{for (let i = 0; i < 1000000; i++) {}})()
-      //     console.log("After dead loop");
-      //     await this.loadSnapshot(snapshotData, index);
-      //   });
-      //   // let snapshotData = await this.downloadSnapshot(snapshot)
-      //   // console.log('At index ' + index + ', snapshotData : ' + snapshotData)
-      // });
+        // this.loadSnapshot(snapshotData, index);
+        let snapshotInJSON = this.convertSnapshotToJSON(snapshotData);
 
-      // Add the domain(s) here,
-      this.addDomainNodes();
+        let snapshotNodeList = []; // Node List for "snapshot"
+        let snapshotEdgeList = []; // Edge List for "snapshot"
 
-      // console.log("Will we enter this strange loop?");
-      for (const domain in this.nodeDomainCluster) {
-        // "ciseClusterInfo" will be array of arrays as stated by CISE Layout documentation
-        // this.ciseClusterInfo.push(this.nodeDomainCluster[domain]);
-        // console.log("Inside the strange loop!!");
-        this.ciseClusterInfo.push(this.nodeDomainCluster[domain].nodeList);
-
-        // Setup compound nodes
-
-        // // Here, try to fetch favicon for each node
-        // this.nodeDomainCluster[
-        //   domain
-        // ].faviconData = await this.getFaviconDataURL(domain);
+        this.readNodesAndEdges(
+          snapshotInJSON,
+          this.addNode,
+          snapshotNodeList,
+          this.addEdge,
+          snapshotEdgeList
+        );
+        this.matchAndMergeSnapshot(
+          snapshotNodeList,
+          snapshotEdgeList,
+          index,
+          finalNodeList,
+          finalEdgeList
+        );
       }
 
-      // Up to this point, graph should be loaded in cytoscape
-      // console.log("Starting to build Cytoscape...");
-      this.initCytoscape(() => {
-        this.setFrame;
+      await this.buildGraphWithCytoscape(finalNodeList, finalEdgeList, () => {
+        this.setFrame(0);
         this.timelineReady = true;
       });
+
+      this.graphPropertyList = []; // Clear the property list
+      this.timelinePropertyList.splice(
+        0,
+        this.timelinePropertyList.length,
+        { name: "URL", value: this.targetURL }, // URL
+        { name: "Snapshot Count", value: this.timelineSnapshotList.length } // Extract year part
+      );
       //this.setProgressIndicatorVisibility(false);
     },
 
-    // Handle snapshots
-    // async processSnapshots() {
-    //   // Loop through all the snapshots
-    //   await this.timelineSnapshotList.forEach(async (snapshot, index) => {
-    //     // 'index' here is the frame index of the timeline
-    //     await this.downloadSnapshot(snapshot).then(async (snapshotData) => {
-    //       // console.log(typeof snapshotData);
-    //       // console.log(snapshotData);
-    //       // console.log('At index ' + index + ', snapshotData : ' + snapshotData)
-    //       console.log("Before non-dead loop");
-    //       // await (async () => {
-    //         // for (let i = 0; i < 1000000; i++) {}
-    //       // })();
-    //       console.log("After non-dead loop");
-    //       await this.loadSnapshot(snapshotData, index);
-    //     });
-    //     // console.log('At index ' + index + ', snapshotData : ' + snapshotData)
-    //   });
-    // },
+    // Close the timeline
+    closeTimeline() {
+      this.resetTimeline();
+
+      // Reset Data
+      this.resetNetwork();
+
+      // Set view mode to single snapshot mode
+      this.viewMode = 0;
+    },
+
+    // Add a snapshot to timeline elements for animation
+    addSnapshotToTimeline(snapshot) {
+      this.selectedSnapshotList.push(snapshot);
+
+      console.log(
+        "addSnapshotToTimeline, this.selectedSnapshotList.length : " +
+          this.selectedSnapshotList.length
+      );
+    },
+
+    // Remove a snapshot from timeline elements for animation
+    removeSnapshotFromTimeline(snapshot) {
+      this.selectedSnapshotList.splice(
+        this.selectedSnapshotList.indexOf(snapshot),
+        1
+      );
+      console.log(
+        "removeSnapshotFromTimeline, this.selectedSnapshotList.length : " +
+          this.selectedSnapshotList.length
+      );
+    },
 
     // Read timeline snapshots from the selected elements in "this.searchTreeItems"
     readTimelineSnapshots() {
+      // Get all selected snapshots
+
       // We need to get all leaves in the tree structure as snapshots exist there
       this.selectedSnapshotList.forEach((snapshotItem) => {
         // "snapshotItem.value" is the actual format of the snapshot
@@ -2724,62 +2923,40 @@ export default {
       });
       this.timelineSnapshotList.sort(); // Sort them
 
-
       for (let i = 0; i < this.timelineSnapshotList.length; i++) {
         this.historyRecordTemplate += "0"; // Initially, node/edge are supposed not to be in any entry in timeline snapshots
       }
     },
 
-    // Load single snapshot
-    loadSnapshot(snapshot, timelineFrameIndex) {
-      let snapshotInJSON = this.convertSnapshotToJSON(snapshot);
-      let {
-        currentSnapshotNodeList,
-        currentSnapshotEdgeList,
-      } = this.readNodesAndEdges(snapshotInJSON /*, timelineFrameIndex*/);
-      this.matchAndMergeSnapshot(
-        currentSnapshotNodeList,
-        currentSnapshotEdgeList,
-        timelineFrameIndex
-      );
-    },
-
-    // Parse snapshots and return it as a string
-    // Two approaches:
-    // 1- Download all then parse
-    // 2-Download and parse immediately (selected)
-    async downloadSnapshot(snapshot) {
-      // Format of snapshot should be 'YYYY-MM-DDTHH:MM:SSZ' e.g. '2012-12-12T08:18:46Z' (obsolete)
+    // Download and return a snapshot
+    // snapshotTimestamp: snapshot timestamp
+    // ssurtURL: given ssurt URL for downloading. If not supplied, this.targetURLInSSURT will be used
+    async downloadSnapshot(snapshotTimestamp, ssurtURL) {
+      // Format of snapshotDate should be 'YYYY-MM-DDTHH:MM:SSZ' e.g. '2012-12-12T08:18:46Z' (obsolete)
       // New format is 14-digit format
-      // let snapshotDate = new Date(snapshot); // Create date for snapshot object
+      console.log('downloadSnapshot, this.getLinkservRequestURLHub["graph"]:');
+      console.log(
+        this.getLinkservRequestURLHub["graph"]
+          .replace("{0}", ssurtURL ? ssurtURL : this.targetURLInSSURT)
+          .replace("{1}", snapshotTimestamp)
+          .replace("{2}", this.maximumDepth_NEW /*this.maximumDepth*/)
+          .replace("{3}", this.timeElasticity)
+      );
 
       // Load the snapshot
       return await this.$axios
         .get(
           this.getLinkservRequestURLHub["graph"]
-            .replace(
-              "{0}",
-              snapshot
-            )
-            .replace(
-              "{1}",
-              1/*this.toolbarItems.depthGroup.controlList.graphDepth
-                .value*/ /*this.graphDepth*/
-            ),
+            .replace("{0}", ssurtURL ? ssurtURL : this.targetURLInSSURT)
+            .replace("{1}", snapshotTimestamp)
+            .replace("{2}", this.maximumDepth_NEW /*this.maximumDepth*/)
+            .replace("{3}", this.timeElasticity),
           { responseType: "text" }
         )
         .then((response) => {
           return typeof response.data === "object"
             ? JSON.stringify(response.data)
             : response.data;
-          // return JSON.stringify(response.data);
-          // return (response.data === "object")?JSON.stringify(response.data):response.data
-          // if (typeof response.data === "object") {
-          //   let temp = JSON.stringify(response.data); // Convert to string
-          //   return temp
-          // } else {
-          //   return response.data;
-          // }
         });
     },
 
@@ -2789,49 +2966,44 @@ export default {
       // This is a normal JSON that can be parsed friendly,
     },
 
-    // Read nodes and edges in JSON format and store them in this.cytoNodes and this.cytoEdges
-    readNodesAndEdges(snapshotInJSON) {
-      // Prepare public suffix list
-      // PLSUtilities.parse(PLSUtilities.PLSData, punycode.toASCII);   // TODO: It's called in this.$nextTick. Is this enough
-      let currentSnapshotNodeList = []; // List of all read nodes of this snapshot
-      let currentSnapshotEdgeList = []; // List of all read edges of this snapshot
-
-      // TODO: Synthesized node shouldn't be existing
-
+    // Read nodes and edges in JSON format
+    readNodesAndEdges(
+      snapshotInJSON,
+      nodeCallback,
+      nodeList,
+      edgeCallback,
+      edgeList
+    ) {
+      // console.log('readNodesAndEdges, snapshotInJSON.length = ' + snapshotInJSON.length)
       // Loop through snapshotInJSON for reading nodes and edges
       for (let i = 0; i < snapshotInJSON.length; i++) {
-        // if ("an" in snapshotInJSON[i]) {
         if (snapshotInJSON[i].hasOwnProperty("an")) {
-          // nodeCountTemp++;
           let node = snapshotInJSON[i]["an"]; // Get node
           let nodeXID = Object.keys(node)[0]; // Get node ID which is XID
-
           let ssurtURL = node[nodeXID]["identifier"]; // according to new names instead of "url"
-          this.insertInOrder(
-            { xid: nodeXID, ssurtURL: ssurtURL /*, realID: undefined*/ },
-            "xid",
-            (listElement, targetValue) => listElement > targetValue,
-            currentSnapshotNodeList
+          let timestamp = node[nodeXID]["timestamp"];
+          // await nodeCallback(nodeXID, ssurtURL, timestamp, nodeList);
+          // console.log('readNodesAndEdges (an), i=' + i)
+          nodeCallback(
+            ssurtURL,
+            { nodeID: nodeXID, timestamp: timestamp },
+            nodeList
           );
-          // } else if ("ae" in snapshotInJSON[i]) {
         } else if (snapshotInJSON[i].hasOwnProperty("ae")) {
-          // edgeCountTemp++;
+          // console.log('readNodesAndEdges (ae), i=' + i)
           let edge = snapshotInJSON[i]["ae"];
           let edgeXID = Object.keys(edge)[0];
-          let sourceNodeXID = edge[edgeXID]["source"];
-          let targetNodeXID = edge[edgeXID]["target"];
-
-          currentSnapshotEdgeList.push({
-            xid: edgeXID,
-            sourceXID: sourceNodeXID,
-            targetXID: targetNodeXID,
-          });
+          let sourceNodeXID = edge[edgeXID]["source"]; // Source Node
+          let targetNodeXID = edge[edgeXID]["target"]; // Target Node
+          // edgeCallback(edgeXID, sourceNodeXID, targetNodeXID, edgeList);
+          edgeCallback(
+            sourceNodeXID,
+            targetNodeXID,
+            { edgeID: edgeXID },
+            edgeList
+          );
         }
       }
-      return {
-        currentSnapshotNodeList: currentSnapshotNodeList,
-        currentSnapshotEdgeList: currentSnapshotEdgeList,
-      };
     },
 
     // Perform matching and merging for a snapshot into main nodes and edges
@@ -2840,23 +3012,46 @@ export default {
     matchAndMergeSnapshot(
       currentSnapshotNodeList,
       currentSnapshotEdgeList,
-      timelineFrameIndex
+      timelineFrameIndex,
+      finalNodeList,
+      finalEdgeList
     ) {
-      // Loop through all nodes for insertion into "this.cytoNodes"
+      // Loop through all nodes for insertion into "this.cytoNodes"❎ "finalNodeList"✅
       // currentSnapshotNodeList.forEach((node) => {
+      // console.log('matchAndMergeSnapshot, at timelineFrameIndex = '  +timelineFrameIndex+ ' currentSnapshotNodeList:')
+      // console.log(currentSnapshotNodeList)
+      // console.log('matchAndMergeSnapshot, currentSnapshotNodeList.length = ' + currentSnapshotNodeList.length)
+      // console.log('matchAndMergeSnapshot, currentSnapshotEdgeList.length = ' + currentSnapshotEdgeList.length)
+      // console.log('matchAndMergeSnapshot, finalNodeList:')
+      // console.log(finalNodeList)
+      // if (timelineFrameIndex === 1) {
+      // console.log('matchAndMergeSnapshot, nodeURLBasedIndexerMap:')
+      // console.log(this.nodeURLBasedIndexerMap)
+
+      // }
       for (let index = 0; index < currentSnapshotNodeList.length; index++) {
         let node = currentSnapshotNodeList[index];
         // Check if inserted before
-        if (this.nodeURLBasedIndexerMap.has(node.ssurtURL)) {
-          let nodeID = this.nodeURLBasedIndexerMap.get(node.ssurtURL); // Check this node was inserted before
+        if (this.nodeURLBasedIndexerMap.has(node.data.ssurtURL)) {
+          let nodeID = this.nodeURLBasedIndexerMap.get(node.data.ssurtURL); // Check this node was inserted before
           let nodeIndex = this.searchBinary(
             "data.id",
             nodeID,
-            this.cytoNodes
+            finalNodeList /*this.cytoNodes*/
           ); // Search nodes using binary search
-          let targetNode = this.cytoNodes[nodeIndex];
-          if (!targetNode) {
-          }
+          // if (timelineFrameIndex === 1) {
+          //   console.log('matchAndMergeSnapshot, node.data.ssurtURL:' + node.data.ssurtURL)
+          //   console.log('matchAndMergeSnapshot, nodeID:' + nodeID)
+          //   console.log('matchAndMergeSnapshot, node:')
+          //   console.log(node)
+
+          // }
+          // console.log('matchAndMergeSnapshot, nodeIndex = ' + nodeIndex)
+          // console.log('matchAndMergeSnapshot, nodeIndex = ' + nodeIndex)
+          let targetNode =
+            finalNodeList[nodeIndex]; /*this.cytoNodes[nodeIndex]*/
+          // if (!targetNode) {
+          // }
 
           // modify node history record
           targetNode.data.nodeHistoryRecord = utilities.setCharAt(
@@ -2866,29 +3061,48 @@ export default {
           );
         } else {
           // New node should be inserted
-          this.insertNode(node.ssurtURL, timelineFrameIndex);
+          // this.insertNode(node.ssurtURL, timelineFrameIndex);
+          let nodeID = generateID("ne");
+          this.addNode(
+            node.data.ssurtURL,
+            {
+              timelineFrameIndex: timelineFrameIndex,
+              addWithSort: true,
+              nodeID: nodeID,
+            },
+            finalNodeList
+          );
+          // Update indexer for finding the next
+          this.nodeURLBasedIndexerMap.set(node.data.ssurtURL, nodeID);
         }
       }
-
-      // Loop through all edges for insertions into "this.cytoEdges"
+      // console.log('matchAndMergeSnapshot, currentSnapshotNodeList')
+      // console.log(currentSnapshotNodeList)
+      // Loop through all edges for insertions into "this.cytoEdges"❎ "finalEdgeList"✅
       for (let index = 0; index < currentSnapshotEdgeList.length; index++) {
         let edge = currentSnapshotEdgeList[index];
+        // console.log('matchAndMergeSnapshot, index = ' + index)
+        // console.log('matchAndMergeSnapshot, edge: ')
+        // console.log(edge)
+
+        // console.log('this.searchBinary("data.id"/*"xid"*/, edge.data.source/*edge.sourceXID*/, currentSnapshotNodeList)')
+        // console.log(this.searchBinary("data.id"/*"xid"*/, edge.data.source/*edge.sourceXID*/, currentSnapshotNodeList))
         let sourceSSURT =
           currentSnapshotNodeList[
             this.searchBinary(
-              "xid",
-              edge.sourceXID,
+              "data.id" /*"xid"*/,
+              edge.data.source /*edge.sourceXID*/,
               currentSnapshotNodeList
             )
-          ].ssurtURL;
+          ].data.ssurtURL;
         let targetSSURT =
           currentSnapshotNodeList[
             this.searchBinary(
-              "xid",
-              edge.targetXID,
+              "data.id" /*"xid"*/,
+              edge.data.target /*edge.targetXID*/,
               currentSnapshotNodeList
             )
-          ].ssurtURL;
+          ].data.ssurtURL;
         // let edgeKey = [sourceSSURT, targetSSURT];  // Not working as the is the array reference not the array elements
         let edgeKey = sourceSSURT + " " + targetSSURT;
         if (this.edgeURLBasedIndexerMap.has(edgeKey)) {
@@ -2896,10 +3110,10 @@ export default {
           let edgeID = this.edgeURLBasedIndexerMap.get(edgeKey);
           let edgeIndex = this.searchBinary(
             "data.id",
-            edgeID ,
-            this.cytoEdges
+            edgeID,
+            finalEdgeList /*this.cytoEdges*/
           );
-          let targetEdge = this.cytoEdges[edgeIndex];
+          let targetEdge = finalEdgeList[edgeIndex]; //this.cytoEdges[edgeIndex];
 
           targetEdge.data.edgeHistoryRecord = utilities.setCharAt(
             targetEdge.data.edgeHistoryRecord,
@@ -2907,125 +3121,27 @@ export default {
             "1"
           );
         } else {
-          // Add new edge
-          // But before inserting new edge, we need to get the id of new
-          this.insertEdge(sourceSSURT, targetSSURT, timelineFrameIndex);
-          insertEdgeCount++;
+          // // Add new edge
+          // // But before inserting new edge, we need to get the id of new
+          // this.insertEdge(sourceSSURT, targetSSURT, timelineFrameIndex);
+          // // insertEdgeCount++;
+          // New code
+          let sourceNodeID = this.nodeURLBasedIndexerMap.get(sourceSSURT); // Get source node ID (realID)
+          let targetNodeID = this.nodeURLBasedIndexerMap.get(targetSSURT); // Get target node ID (realID)
+          let edgeID = generateID("ne");
+          this.addEdge(
+            sourceNodeID,
+            targetNodeID,
+            { edgeID: edgeID, timelineFrameIndex: timelineFrameIndex },
+            finalEdgeList
+          );
+          // Update the indexer
+          this.edgeURLBasedIndexerMap.set(
+            sourceSSURT + " " + targetSSURT,
+            edgeID
+          );
         }
       }
-    },
-
-    // Insert "targetObject" into "targetList" in order using key and a compare function
-    insertInOrder(targetObject, key, shiftingConditionFunction, targetList) {
-      let index = targetList.length - 1;
-      let found = false;
-      while (index >= 0 && !found) {
-        shiftingConditionFunction(targetList[index][key], targetObject[key])
-          ? index--
-          : (found = true); // Sorting will be based on URL
-      }
-      targetList.splice(index + 1, 0, targetObject); // Insert the object
-    },
-
-    // Add the node using insertion sort way
-    // async addNodeUsingInsertionSort(
-    insertNode(ssurtURL, timelineFrameIndex) {
-      let regularURL = ssurt.ssurtToRegularURL(ssurtURL); // Get the regular url
-
-      // Shorten the url to be suitable for a label
-      let index = utilities.indexOfNth(regularURL, "/", 3);
-      let label = index !== -1 ? regularURL.substring(0, index) : regularURL;
-      let domainName = regularURL ? this.getDomainName(regularURL) : null; // Get domain // TODO: This is a test, put the actual code
-      // TODO: you can eliminate these temp variables and directly add them in the objects
-      let fileType = this.guessFileType(regularURL); // Guess the file type
-      let countryCode = this.guessCountryCode(domainName); // Guess the country code
-      // After generating then id, convert it to string
-      let nodeID = generateID("ne"); /*+ ""*/ // according to discuss with Amr Morad, we'll generate a new ID
-      let nodeHistoryRecord = utilities.setCharAt(
-        this.historyRecordTemplate,
-        timelineFrameIndex,
-        "1"
-      );
-
-      if (domainName) {
-        // check if "nodeDomainCluster" has a key equal to "domainName"
-        if (this.nodeDomainCluster.hasOwnProperty(domainName)) {
-          // Push new entry in the array
-          this.nodeDomainCluster[domainName].nodeList.push(nodeID);
-        } else {
-          // Create new array
-          this.nodeDomainCluster[domainName] = {};
-          this.nodeDomainCluster[domainName].nodeList = [nodeID];
-
-          // Here, try to fetch favicon for each node
-          // TODO: Urgent! Comment for now favicon proxy solution till you get Tasneem' another solution
-          // this.nodeDomainCluster[
-          //   domainName
-          // ].faviconData = await this.getFaviconDataURL(domainName);
-          // Here, in this point we should the part of loading the favicon
-          // TODO: Is it easy to do? Needs investigation?
-        }
-      }
-      // TODO: Add a handler for case such as 'https://s3.amazonaws.com/com.alexa.toolbar/atbp/4cE76z/download/index.htm'
-      // TODO: This is urgent task
-
-      // Insert the new node
-      this.cytoNodes.push({
-        // TODO: Add the actual URL, actual file type
-        data: {
-          id: nodeID, // real ID
-          label: label, // label: will hold the short form
-          // TODO: URGENT! Remove favicon for now
-          // faviconData: domainName
-          //   ? this.nodeDomainCluster[domainName].faviconData
-          //   : "",
-          url: regularURL, //"https://vuetifyjs.com", // TODO: This is a test, put the actual code
-          fileType: fileType, //"pdf", // TODO: This is a test, put the actual code
-          countryCode: countryCode, //"eg", // TODO: This is a test, put the actual code
-          nodeHistoryRecord: nodeHistoryRecord,
-          // FUTURE TODO: Try a better solution for handling
-          // parent: domainName ? domainName : undefined,
-          parent: domainName ? domainName.replace(/\./g, "_") : undefined,
-          // domain: this.getDomainName(url), // calculate domain name // RETHINK
-          // }),
-        },
-      });
-
-      // Update indexer for finding the next
-      this.nodeURLBasedIndexerMap.set(ssurtURL, nodeID);
-
-      // TODO: Maybe you need to check that this condition will not fail
-      if (!this.rootNodeID) {
-        let tempURL = new URL(this.targetURL);
-        if (tempURL.href === regularURL) {
-          // First condition is added in order to try to speed up the search if found
-          // This is the available way for getting root node as we have no way from link-serv requests
-          this.rootNodeID = nodeID;
-        }
-      }
-    },
-
-    // Add new edge
-    insertEdge(sourceSSURT, targetSSURT, timelineFrameIndex) {
-      let sourceNodeID = this.nodeURLBasedIndexerMap.get(sourceSSURT); // Get source node ID (realID)
-      let targetNodeID = this.nodeURLBasedIndexerMap.get(targetSSURT); // Get target node ID (realID)
-      let edgeID = generateID("ne"); /*+ ""*/ // Real ID (Convert it to string)
-
-      this.cytoEdges.push({
-        data: {
-          id: edgeID, // real ID
-          source: sourceNodeID,
-          target: targetNodeID,
-          edgeHistoryRecord: utilities.setCharAt(
-            this.historyRecordTemplate,
-            timelineFrameIndex,
-            "1"
-          ),
-        },
-      });
-
-      // Update the indexer
-      this.edgeURLBasedIndexerMap.set(sourceSSURT + " " + targetSSURT, edgeID);
     },
 
     // Try to guess the country code from the domain (egyptian www.nissan.com.eg, british www.nissan.co.uk,..etc)
@@ -3103,24 +3219,34 @@ export default {
       }
     },
 
+    // Update Current Value (position or cursor) of timeline
+    updateCurVal(value) {
+      this.currentPlayedFrameIndex = value;
+    },
+
     // Toggle the repeat playing animation
     toggleRepeat(repeat) {
       this.repeatTimelinePlay = repeat;
+      console.log("toggleRepeat, repeat = " + repeat);
+      console.log(
+        "toggleRepeat, this.repeatTimelinePlay = " + this.repeatTimelinePlay
+      );
     },
 
     // Play animation in the time line
     async playTimelineAnimation() {
       this.currentAnimationAction = "playing";
-      // this.currentPlayedFrameIndex = startFrameIndex;
-
-      //this.setFrame(startFrameIndex); // Initially, set the frame in the beginning
       do {
-        // for (let index = startFrameIndex; index < endFrameIndex; index++) {
-        // let animationLoopDone = false;
-        while (
-          // !animationLoopDone /*this.currentPlayedFrameIndex < endFrameIndex*/
-          this.currentAnimationAction === "playing"
-        ) {
+        console.log(
+          "playTimelineAnimation, first line in outer loop, this.repeatTimelinePlay = " +
+            this.repeatTimelinePlay
+        );
+        console.log(
+          "playTimelineAnimation, first line in outer loop, this.currentAnimationAction = " +
+            this.currentAnimationAction
+        );
+        while (this.currentAnimationAction === "playing") {
+          console.log("playTimelineAnimation, first line in inner loop");
           await this.advanceToFrame(this.currentPlayedFrameIndex + 1);
           this.currentPlayedFrameIndex++;
           if (
@@ -3132,12 +3258,16 @@ export default {
             //this.setFrame(0)
             // animationLoopDone = true;
             this.currentPlayedFrameIndex = 0;
-            if (this.currentAnimationAction === "playing") {
+            // if (this.currentAnimationAction === "playing") {
+            if (!this.repeatTimelinePlay) {
               this.currentAnimationAction = "ready";
             }
           }
         }
-      } while (this.repeatTimelinePlay);
+      } while (
+        this.repeatTimelinePlay &&
+        this.currentAnimationAction === "playing"
+      );
     },
 
     // Advance Frame in animation
@@ -3233,8 +3363,7 @@ export default {
         await Promise.all([
           showingAnimationPromise,
           hidingAnimationPromise,
-        ]).then(() => {
-        });
+        ]).then(() => {});
       }
     },
 
@@ -3327,6 +3456,274 @@ export default {
     // Clear timeline from any data and return to normal mode
     clearTimeline() {},
 
+    // Download favicon given a domain URL
+    async downloadFavicon_NEW(domainURL) {
+      // Start to download favicon if exists
+      return await new Promise((resolve, reject) => {
+        const img = new Image();
+        img.crossOrigin = "Anonymous";
+        img.onload = () => {
+          let canvas = document.createElement("CANVAS");
+          const ctx = canvas.getContext("2d");
+          canvas.height = img.height;
+          canvas.width = img.width;
+          ctx.drawImage(img, 0, 0);
+          const dataURL = canvas.toDataURL();
+          canvas = null;
+          resolve(dataURL);
+        };
+        img.onerror = (e) => {
+          // Handle error here
+          reject("Error!!Cannot grab " + domainURL + " favicon");
+        };
+        // img.src = 'http://linkgate.bibalex.org/ico?' + domainURL
+        img.src =
+          "/ico?" +
+          domainURL +
+          (domainURL.endsWith("/") ? "" : "/") +
+          "favicon.ico";
+      }).then(
+        (dataURI) => dataURI,
+        (error) => ""
+      );
+    },
+
+    // // Download a file from URL
+    // async downloadFile(url) {
+    //   // Start to download favicon if exists
+    //   await new Promise((resolve, reject) => {
+    //     const img = new Image();
+    //     img.crossOrigin = "Anonymous";
+    //     img.onload = () => {
+    //       let canvas = document.createElement("CANVAS");
+    //       const ctx = canvas.getContext("2d");
+    //       canvas.height = img.height;
+    //       canvas.width = img.width;
+    //       ctx.drawImage(img, 0, 0);
+    //       const dataURL = canvas.toDataURL();
+    //       canvas = null;
+    //       resolve(dataURL);
+    //     };
+    //     img.onerror = (e) => {
+    //       // Handle error here
+    //       reject("Error!!Cannot grab " + domainURL + " favicon");
+    //     };
+    //     // img.src = 'http://linkgate.bibalex.org/ico?' + domainURL
+    //     img.src = "/ico?" + domainURL;
+    //   }).then(
+    //     (dataURI) => dataURI,
+    //     (error) => ""
+    //   );
+    // },
+
+    // Obsolete and to be removed
+    // // Download all favicon available for the project
+    // async downloadAllDomain() {
+    //   for (const domain in this.nodeDomainCluster) {
+    //     await this.downloadFavicon(domain);
+    //   }
+    // },
+
+    // // Download flag if needed
+    // async downloadFlagIfNeeded(countryCode) {
+    //   // Check if this flag already exists
+    //   if (this.countryFlags.has(countryCode)) {
+    //     // console.log('downloadFlagIfNeeded countryCode is already existed')
+    //     // Exists => return it from the map
+    //     return this.countryFlags.get(countryCode);
+    //   } else {
+    //     // Download the flag
+    //     let flagData = await this.downloadFlag(countryCode);
+    //     this.countryFlags.set(countryCode, flagData);
+    //     return flagData;
+    //   }
+    // },
+
+    // // Download all flags
+    async downloadAllFlags() {
+      // Loop through all existing flags
+      for (const countryCode in this.countryFlags) {
+        let flagData = await this.downloadFlag(countryCode);
+        this.countryFlags[countryCode] = flagData;
+        console.log(
+          "downloadAllFlags, this.countryFlags[" +
+            countryCode +
+            "] = " +
+            this.countryFlags[countryCode]
+        );
+      }
+    },
+
+    // Download flag
+    async downloadFlag(countryCode) {
+      // Start to download favicon if exists
+      return await new Promise((resolve, reject) => {
+        const img = new Image();
+        img.crossOrigin = "Anonymous";
+        img.onload = () => {
+          let canvas = document.createElement("CANVAS");
+          const ctx = canvas.getContext("2d");
+          canvas.height = img.height;
+          canvas.width = img.width;
+          ctx.drawImage(img, 0, 0);
+          const dataURL = canvas.toDataURL();
+          canvas = null;
+          resolve(dataURL);
+        };
+        img.onerror = (e) => {
+          // Handle error here
+          reject("Error!!Cannot download flag for " + countryCode);
+        };
+        img.src =
+          "/ico?" +
+          this.$config.countryFlagTemplateAPIURL
+            .replace("{0}", countryCode)
+            .replace("{1}", "flat")
+            .replace("{2}", "16");
+      }).then(
+        (dataURI) => dataURI,
+        (error) => ""
+      );
+    },
+
+    // Obsolete and to be removed
+    // // Download favicon given a domain URL
+    // async downloadFavicon(domainURL) {
+    //   // Start to download favicon if exists
+    //   // await this.$axios.get("/ico?" + domainURL, { responseType: 'blob'}).then((response) => {
+    //   //   // convert this favicon to
+    //   //   let blob = new Blob(response.data, {type: 'image/png'})
+    //   // });
+    //   // let vm = this
+    //   await new Promise((resolve, reject) => {
+    //     const img = new Image();
+    //     img.crossOrigin = "Anonymous";
+    //     img.onload = () => {
+    //       let canvas = document.createElement("CANVAS");
+    //       const ctx = canvas.getContext("2d");
+    //       canvas.height = img.height;
+    //       canvas.width = img.width;
+    //       ctx.drawImage(img, 0, 0);
+    //       const dataURL = canvas.toDataURL();
+    //       canvas = null;
+    //       resolve(dataURL);
+    //     };
+    //     img.onerror = (e) => {
+    //       // Handle error here
+    //       reject("Error!!Cannot grab " + domainURL + " favicon");
+    //     };
+    //     // img.src = 'http://linkgate.bibalex.org/ico?' + domainURL
+    //     img.src = "/ico?" + domainURL;
+    //   }).then(
+    //     (dataURI) => {
+    //       // Save the favicon to the domain
+    //       // console.log(dataURI);
+    //       this.nodeDomainCluster[domainURL].favicon = dataURI;
+    //       // vm.nodeDomainCluster[domainURL].favicon = dataURI;
+    //     },
+    //     (error) => {
+    //       // Error occurred, so this domain will have no icon
+    //       // console.warn(error);
+    //       this.nodeDomainCluster[domainURL].favicon = "";
+    //       // vm.nodeDomainCluster[domainURL].favicon = null;
+    //     }
+    //   );
+    // },
+
+    // Load node children (incremental loading approach)
+    // nodeID: ID of parent node
+    // ssurtURL: URL of this node in SSURT format
+    async loadNodeChildren(node) {
+      // Get reference to node
+      let timestamp = node.data("timestamp");
+      if (timestamp) {
+        console.log(
+          "Inside loadNodeChildren, It's supposed to load children for node with timestamp = " +
+            timestamp +
+            ", and ssurt = " +
+            node.data()
+        );
+        let ssurtURL = node.data("ssurtURL"); // Get URL in ssurt mode
+        let nodeList = []; // Node List
+        let edgeList = []; // Edge List
+
+        // Download  snapshot for this node ID
+        let snapshotData = await this.downloadSnapshot(timestamp, ssurtURL);
+
+        let snapshotInJSON = this.convertSnapshotToJSON(snapshotData); // Convert to JSON
+
+        this.readNodesAndEdges(
+          snapshotInJSON,
+          this.addNode,
+          nodeList,
+          this.addEdge,
+          edgeList
+        );
+
+        this.addSubgraph(nodeList, edgeList); // Add the
+        this.applyStyle();
+      }
+    },
+
+    // Add a subgraph to exiting graph
+    addSubgraph(nodeList, edgeList) {
+      let tempList = nodeList.concat(edgeList); // Concatenate nodes and edges
+      this.cyto.add(tempList); // Add to cytoscape
+    },
+
+    // Apply style sheet to nodes
+    applyStyle() {
+      // Re-apply style upon nodes
+      this.cyto.json({
+        style: [
+          {
+            selector: ":childless",
+            style: {
+              ...this.normalNodeStyle, // Use spread operator for adding node style
+              label:
+                // this.getSelectedNodeLabelFormatIndex === 0
+                this.getNodeLabelFormatCurrentIndex === 0
+                  ? "data(label)"
+                  : "data(url)",
+              // label: "data(label)", // Will Remain constant all the time
+            },
+          },
+          // {
+          //   selector: ":parent",
+          //   style: {
+          //     ...this.collapsedNodeStyle,
+          //   }
+          // style: {
+          //   "background-opacity": 0.333,
+          // },
+          // },
+          // {
+          //   // Class for blinking components with path finder
+          //   selector: ".pathFinderIndicator",
+          //   style: {
+          //     "background-color": "#61bffc",
+          //     "line-color": "#61bffc",
+          //     "target-arrow-color": "#61bffc",
+          //     "transition-property":
+          //       "background-color, line-color, target-arrow-color",
+          //     "transition-duration": "2s",
+          //   },
+          // },
+          {
+            selector: "edge",
+            style: {
+              ...this.normalEdgeStyle,
+              // width: 1,
+              // "line-color": "#ccc",
+              // "target-arrow-color": "#ccc",
+              // "target-arrow-shape": "triangle",
+              // "curve-style": "straight", //"unbundled-bezier","bezier","haystack"
+            },
+          },
+        ],
+      });
+    },
+
     //----------------------------------------------------------------------------------------------------------------
 
     // Call after graph is rendered and for only one time
@@ -3335,13 +3732,13 @@ export default {
       this.enableZoomButtons(true);
 
       // Enable Expand all and collapse all buttons
-      this.enableCollapseAllExpandAllButtons(true);
+      // this.enableCollapseAllExpandAllButtons(true);
 
       this.enableNodeFilter(true);
       // this.enableDepthSlider(true);
-      this.enableReloadButton(true);
+      // this.enableReloadButton(true);
       this.enableScreenshotButton(true);
-      this.enableShowSettingsButton(true);
+      // this.enableShowSettingsButton(true);
       // this.enableSettingsButton(true);
     },
 
@@ -3366,9 +3763,7 @@ export default {
                   ///*searchTreeItem.id +*/ , //generateID(), // id is a MUST for making prop "activable" working
                   name: monthStringList[key - 1],
                   parent: searchTreeItem, // Parent
-                  ...(this.getGraphLocatorModeOptionList[
-                    this.selectedGraphLocatorModeIndex
-                  ] === "View Snapshots in Calendar"
+                  ...(this.viewMode === 0 && this.snapshotSelectionMode === 1
                     ? {}
                     : { children: [] }),
                   // children: [], // hold the days
@@ -3429,6 +3824,7 @@ export default {
                 value: oneSnapshot, // Actual value
                 name: label,
                 parent: searchTreeItem, // Parent
+                selected: false, // Used for timeline selection
                 // children: [], // Holds the snapshot (But since this is a snapshot, so no children exist)
               });
               // this.snapshotList.push({
@@ -3452,12 +3848,21 @@ export default {
     },
 
     // Get stored version count for a given url per year
-    async loadVersionCountYearly() {
+    async loadVersionCountsYearly() {
       console.log('this.getLinkservRequestURLHub["versionCountsYearly"]');
       console.log(this.getLinkservRequestURLHub["versionCountsYearly"]);
+      console.log(
+        this.getLinkservRequestURLHub["versionCountsYearly"].replace(
+          "{0}",
+          this.targetURLInSSURT
+        )
+      );
       let result = await this.$axios.$get(
         // this.linkservRequestBaseURLStore["versionCountsYearly"]
-        this.getLinkservRequestURLHub["versionCountsYearly"]
+        this.getLinkservRequestURLHub["versionCountsYearly"].replace(
+          "{0}",
+          this.targetURLInSSURT
+        )
       );
 
       // Parse the result
@@ -3472,17 +3877,23 @@ export default {
           children: [],
         });
       }
-
-      // Check that if no entries for years, then display an info for user
+      // Check that if no entries for years, then display an info for user that there is no result for the URL
+      if (this.searchTreeItems.length === 0) {
+        // Show message box to user with useful info
+        this.popupMessage =
+          "No data exists for this URL. Please, check it or try another one.";
+        this.popupMessageTitle = "URL";
+        this.showArrowDirection = null;
+        this.showPopupMessage = true;
+      }
     },
 
     // Get stored verison count for a given url with a given year per day
     async loadVersionCountMonthly(year) {
       return await this.$axios.get(
-        this.getLinkservRequestURLHub["versionCountsMonthly"].replace(
-          "{0}",
-          year
-        )
+        this.getLinkservRequestURLHub["versionCountsMonthly"]
+          .replace("{0}", this.targetURLInSSURT)
+          .replace("{1}", year)
       );
     },
 
@@ -3491,8 +3902,9 @@ export default {
     async loadVersionCountDaily(year, month) {
       return await this.$axios.get(
         this.getLinkservRequestURLHub["versionCountsDaily"]
-          .replace("{0}", year)
-          .replace("{1}", month)
+          .replace("{0}", this.targetURLInSSURT)
+          .replace("{1}", year)
+          .replace("{2}", month)
       );
     },
 
@@ -3501,143 +3913,277 @@ export default {
     // year, month and day should all be string
     async loadVersions(year, month, day) {
       return await this.$axios.get(
-        this.getLinkservRequestURLHub["versions"].replace(
-          "{0}",
-          // `${year}-${month}-${day <= 9 ? "0" : ""}${day}`
-          // `${year}-${month}-${day}`    // Old when dashes was separators
-          `${year}${month}${day}` // New without dashes
-        )
+        this.getLinkservRequestURLHub["versions"]
+          .replace("{0}", this.targetURLInSSURT)
+          .replace(
+            "{1}",
+            // `${year}-${month}-${day <= 9 ? "0" : ""}${day}`
+            // `${year}-${month}-${day}`    // Old when dashes was separators
+            `${year}${month}${day}` // New without dashes
+          )
       );
     },
 
     // Load Graph with a given snapshot
-    async loadGraphWithSnapshot(snapshot /*, selectedDay*/) {
-      // Format of snapshot will be 'YYYY-MM-DDTHH:MM:SSZ' e.g. '2012-12-12T08:18:46Z'  (Obsolete)
-      // Format of snapshot now should be 'YYYYMMDDHHMMSS' (14-digit format)
-      console.log("Inside loadGraph(snapshot), snapshot = " + snapshot);
+    async loadGraphWithSnapshot_NEW(timestamp) {
+      this.setProgressIndicatorVisibility(true); // Show progress bar
+      this.setProgressIndicatorMessage("Please wait...");
+      // Format of 'timestamp' now should be 'YYYYMMDDHHMMSS' (14-digit format)
 
       // Replace old code with old date with a new one
-      this.currentGraphSnapshotDate = snapshot; // save snapshot date
+      this.selectedTimestamp = timestamp; // save snapshot date
+      let nodeList = []; // Node List
+      let edgeList = []; // Edge List
 
-      await this.loadGraph();
-    },
-
-    // Load a graph
-    async loadGraph() {
-      this.setProgressIndicatorVisibility(true);    // Show progress bar
-      let graph = await this.$axios.$get(
-        this.getLinkservRequestURLHub["graph"]
-          .replace("{0}", /*snapshot*/ this.currentGraphSnapshotDate)
-          .replace(
-            "{1}",
-            1/*this.toolbarItems.depthGroup.controlList.graphDepth
-              .value*/ /*this.graphDepth*/
-          ),
-        { responseType: "text" }
+      let snapshotData = await this.downloadSnapshot(timestamp); // Download snapshot of "this.targetURLInSSURT"
+      let snapshotInJSON = this.convertSnapshotToJSON(snapshotData); // Convert to JSON
+      this.resetNetwork();
+      this.readNodesAndEdges(
+        snapshotInJSON,
+        this.addNode,
+        nodeList,
+        this.addEdge,
+        edgeList
       );
-
-      if (typeof graph === "object") {
-        graph = JSON.stringify(graph); // Convert to string
-      }
-
-      if (graph.length !== 0) {
-        this.rebuildGraph(graph);
-      }
-    },
-
-    // Parse Data returned successfully from link-serv almost as a JSON file (Actually it's a format compatible with Gephi)
-    async parseLinkServData(linkServJSON) {
-      // Now, this file contains multiple root JSON object which is not standard.
-      // For solving this problem, we'll try to add some characters to make it standard
-      let linkServJSONModified = linkServJSON.replace(/}\s*{/gm, "},{"); // Add comma to separate between objects
-      linkServJSONModified = "[" + linkServJSONModified + "]"; // Append array brackets
-
-      // Now this is a normal JSON that can be parsed friendly,
-
-      // Parse JSON file into JS objects
-      let linkServGraph = JSON.parse(linkServJSONModified);
-      let i;
-      let postponedEdges = {}; // Hold edges that will be detected in later after parsing
-
-      for (i = 0; i < linkServGraph.length; i++) {
-        if (linkServGraph[i].hasOwnProperty("an")) {
-          let node = linkServGraph[i]["an"];
-          let nodeID = Object.keys(node)[0];
-          // Old code with "url", replaced with "identifier"
-          // let nodeURL = node[nodeID]["url"];
-          let nodeURL = node[nodeID]["identifier"];
-          let xPos = node[nodeID]["x"];
-          let yPos = node[nodeID]["y"];
-          let tempURLStr = ssurt.ssurtToRegularURL(nodeURL);
-          // TODO: This is a fast way for getting the domain instead. Maybe it can be perfect and fast.
-          //       But if it's not working, return back to class "URL"
-          let tempIndex = utilities.indexOfNth(tempURLStr, "/", 3);
-          let shortName =
-            tempIndex !== -1 ? tempURLStr.substring(0, tempIndex) : tempURLStr;
-
-          // Add the node using insertion sort way
-          await this.addNodeUsingInsertionSort(nodeID, {
-            label: shortName,
-            // fileType: "pdf",
-            url: tempURLStr,
-            // countryCode: "eg",
-          });
-
-        } else if (linkServGraph[i].hasOwnProperty("ae")) {
-          let edge = linkServGraph[i]["ae"];
-          let edgeID = Object.keys(edge)[0];
-          let sourceNodeID = edge[edgeID]["source"];
-          let targetNodeID = edge[edgeID]["target"];
-
-          // PROOF of CONCEPT
-          let edgeData = {
-            data: { id: edgeID, source: sourceNodeID, target: targetNodeID },
-          };
-          this.cytoEdges.push(edgeData);
-
-          // Better code
-          [sourceNodeID, targetNodeID].forEach((nodeID) => {
-            if (this.makeBinarySearchOnNodes(nodeID) === -1) {
-              if (postponedEdges[nodeID] === undefined) {
-                postponedEdges[nodeID] = [edgeData];
-              } else {
-                postponedEdges[nodeID].push(edgeData);
-              }
-            }
-          });
-        }
-      }
-
-      this.addDomainNodes();
-
-      // Add synthesized nodes stage
-      let addedNodeCount = 0;
-      for (let nodeID in postponedEdges) {
-        if (this.makeBinarySearchOnNodes(nodeID) === -1) {
-          this.addNodeUsingInsertionSort(nodeID); // This is a synthesized node, so option passed
-          addedNodeCount++;
-        }
-      }
-      // setup "ciseClusterInfo" for using in CISE Layout
-      for (const domain in this.nodeDomainCluster) {
-        // "ciseClusterInfo" will be array of arrays as stated by CISE Layout documentation
-        this.ciseClusterInfo.push(this.nodeDomainCluster[domain].nodeList);
-      }
+      // this.addDomainNodes(nodeList); // Add domain node(s)
 
       // Till this point, "rootNodeID" should be found. If not print an error message in the console
       if (!this.rootNodeID) {
         console.error("Root node ID is still not Found!!Check your code");
         alert("Root node ID is still not Found!!Check your code");
       }
-      // if (addedNodeCount === 0) {
-      //   console.log("No new node was added");
-      // } else {
-      //   console.log(
-      //     `${addedNodeCount} new node${
-      //       addedNodeCount === 1 ? " was" : "s were"
-      //     } added`
-      //   );
+      await this.buildGraphWithCytoscape(nodeList, edgeList, () => {});
+
+      // Prepare 'graphPropertyList' for displaying it in the property list of graph
+      // this.graphPropertyList = [];
+      this.timelinePropertyList = []; // Clear the timeline
+      this.graphPropertyList.splice(
+        0,
+        this.graphPropertyList.length,
+        { name: "URL", value: this.targetURL }, // URL
+        { name: "Year", value: timestamp.substr(0, 4) }, // Extract year part
+        {
+          name: "Month",
+          value: monthStringList[Number(timestamp.substr(4, 2)) - 1],
+        }, // Extract month part
+        { name: "Day", value: Number(timestamp.substr(6, 2)) }, // Extract month part
+        {
+          name: "Time",
+          value:
+            timestamp.substr(8, 2) +
+            ":" +
+            timestamp.substr(10, 2) +
+            ":" +
+            timestamp.substr(12, 2),
+        }
+      );
+      // this.graphPropertyList = graphProps
+    },
+
+    // Toggle calendar display
+    openCalendar(item) {
+      this.calendarYear = item.parent.value;
+      this.calendarMonth = item.value;
+      this.calendarTitle = item.name + " " + this.calendarYear;
+      // document.removeEventListener("mousemove", this.saveMousePosition);
+      // console.log("openCalendar, this.targetURLInSSURT = " + this.targetURLInSSURT)
+      this.calendarShown = true;
+    },
+
+    // Callback for handling node read from downloaded snapshot
+    addNode(
+      ssurtURL,
+      {
+        nodeID = undefined,
+        addWithSort = true,
+        timestamp = undefined,
+        timelineFrameIndex = -1,
+      },
+      nodeList
+    ) {
+      let url = ssurt.ssurtToRegularURL(ssurtURL);
+      // TODO: This is a fast way for getting the domain instead. Maybe it can be perfect and fast.
+      //       But if it's not working, return back to class "URL"
+      // let tempIndex = utilities.indexOfNth(url, "/", 3);
+      // let label = tempIndex !== -1 ? url.substring(0, tempIndex) : url;
+
+      // Add node ID to cluster structure
+      let domainName = url ? this.getDomainName(url) : null; // TODO: This is a test, put the actual code
+
+      // change the way of displaying the label
+      let tempIndex = utilities.indexOfNth(url, "/", 3) + 1;
+      let firstStr = url.substring(0, tempIndex); // Get the domain of the string
+      tempIndex = url.lastIndexOf("/");
+      let secondStr = url.substring(tempIndex); // Get only part of the path
+      let label = firstStr + "..." + secondStr;
+
+      let newNodeID = nodeID !== undefined ? nodeID : generateID("ne");
+
+      let nodeHistoryRecord =
+        timelineFrameIndex !== -1
+          ? utilities.setCharAt(
+              this.historyRecordTemplate,
+              timelineFrameIndex,
+              "1"
+            )
+          : undefined;
+
+      // Old working code
+      // let countryFlag = null;
+      // if (domainName) {
+      //   // check if "nodeDomainCluster" has a key equal to "domainName"
+      //   if (this.nodeDomainCluster.hasOwnProperty(domainName)) {
+      //     // Push new entry in the array
+      //     this.nodeDomainCluster[domainName].nodeList.push(newNodeID/*nodeID*/);
+      //   } else {
+      //     // Create new array
+      //     this.nodeDomainCluster[domainName] = {};
+      //     this.nodeDomainCluster[domainName].nodeList = [newNodeID/*nodeID*/];
+
+      //     // Try to download favicon here
+      //     this.nodeDomainCluster[
+      //       domainName
+      //     ].favicon = await this.downloadFavicon_NEW(domainName);
+      //   }
+      //   // Original code
+      //   // let countryCode = this.guessCountryCode(domainName); // Guess the country code
+      //   // if (countryCode) {
+      //   //   // Original code
+      //   //   // Download the country code if needed
+      //   //   countryFlag = await this.downloadFlagIfNeeded(countryCode);
+      //   // }
+      //   // Feature Test Code
+      //   countryFlag = await this.downloadFlagIfNeeded("eg");
+      //   // Feature Test Code
       // }
+      // TODO: Add a handler for case such as 'https://s3.amazonaws.com/com.alexa.toolbar/atbp/4cE76z/download/index.htm'
+      // TODO: This is urgent task\
+      let countryCode = undefined;
+      if (domainName) {
+        // check if "nodeDomainCluster" has a key equal to "domainName"
+        if (this.nodeDomainCluster.hasOwnProperty(domainName)) {
+          // Push new entry in the array
+          this.nodeDomainCluster[domainName].nodeList.push(
+            newNodeID /*nodeID*/
+          );
+        } else {
+          // Create new array
+          this.nodeDomainCluster[domainName] = {};
+          this.nodeDomainCluster[domainName].nodeList = [newNodeID /*nodeID*/];
+        }
+        // Original code
+        countryCode = this.guessCountryCode(domainName);
+        // Original code
+        // // TEST CODE
+        // countryCode = "eg";
+        // // TEST CODE
+        if (countryCode && !this.countryFlags.hasOwnProperty(countryCode)) {
+          this.countryFlags[countryCode] = undefined;
+        }
+      }
+
+      const nodeObj = {
+        group: "nodes",
+        data: {
+          id: newNodeID, //nodeID, //generateID("ne"),
+          label: label, // label: will hold the short form
+          favicon: "", //domainName ? this.nodeDomainCluster[domainName].favicon : "",
+          domain: domainName,
+          url: url, //"https://vuetifyjs.com", // TODO: This is a test, put the actual code
+          ssurtURL: ssurtURL, // Maybe in the future, we can remove it if the library for converting frim library to suurtv is mature enough
+          // fileType: fileType, //"pdf", // TODO: This is a test, put the actual code
+          // countryCode: countryCode, //"eg", // TODO: This is a test, put the actual code
+          countryCode: countryCode /*Test Data*/, //countryCode
+          countryFlag: "", //,countryFlag, // Flag Data
+          ...(timestamp ? { timestamp: timestamp } : {}),
+          ...(nodeHistoryRecord
+            ? { nodeHistoryRecord: nodeHistoryRecord }
+            : {}),
+          // FUTURE TODO: Try a better solution for handling
+          // parent: domainName ? domainName : undefined,
+          parent: domainName ? domainName.replace(/\./g, "_") : undefined,
+          //
+          // domain: this.getDomainName(url), // calculate domain name // RETHINK
+        },
+      };
+
+      // Postponed till we investigate visors extensively
+      // let fileType = this.guessFileType(url); // Guess the file type
+
+      // this.cytoNodes.push({
+      if (addWithSort) {
+        // Add the node with sorting in proper place
+        let index = nodeList.length - 1;
+        let found = false;
+        while (index >= 0 && !found) {
+          if (nodeObj.data.id < nodeList[index].data.id) {
+            index--;
+          } else {
+            found = true;
+          }
+        }
+        nodeList.splice(index + 1, 0, nodeObj);
+      } else {
+        nodeList.push(nodeObj);
+        // nodeList.push({
+        //   group: "nodes",
+        //   data: {
+        //     id: newNodeID,//nodeID, //generateID("ne"),
+        //     label: label, // label: will hold the short form
+        //     favicon: "",//domainName ? this.nodeDomainCluster[domainName].favicon : "",
+        //     url: url, //"https://vuetifyjs.com", // TODO: This is a test, put the actual code
+        //     ssurtURL: ssurtURL, // Maybe in the future, we can remove it if the library for converting frim library to suurtv is mature enough
+        //     // fileType: fileType, //"pdf", // TODO: This is a test, put the actual code
+        //     // countryCode: countryCode, //"eg", // TODO: This is a test, put the actual code
+        //     countryCode: "eg"/*Test Data*/,//countryCode
+        //     countryFlag: "",//,countryFlag, // Flag Data
+        //     ...(timestamp?{timestamp:timestamp}:{}),
+        //     ...(nodeHistoryRecord?{nodeHistoryRecord:nodeHistoryRecord}:{}),
+        //     // FUTURE TODO: Try a better solution for handling
+        //     // parent: domainName ? domainName : undefined,
+        //     parent: domainName ? domainName.replace(/\./g, "_") : undefined,
+        //     //
+        //     // domain: this.getDomainName(url), // calculate domain name // RETHINK
+        //   },
+        // });
+      }
+
+      // TODO: Maybe you need to check that this condition will not fail
+      if (!this.rootNodeID) {
+        let tempURL = new URL(this.targetURL);
+        if (tempURL.href === url) {
+          // First condition is added in order to try to speed up the search if found
+          // This is the available way for getting root node as we have no way from link-serv requests
+          this.rootNodeID = nodeID;
+        }
+      }
+    },
+
+    // Callback for handling edge read from downloaded snapshot
+    addEdge(
+      sourceID,
+      targetID,
+      { edgeID = undefined, timelineFrameIndex = -1 },
+      edgeList
+    ) {
+      // this.cytoEdges.push({
+      edgeList.push({
+        group: "edges",
+        data: {
+          id: edgeID !== undefined ? edgeID : generateID("ne"),
+          source: sourceID,
+          target: targetID,
+          ...(timelineFrameIndex !== -1
+            ? {
+                edgeHistoryRecord: utilities.setCharAt(
+                  this.historyRecordTemplate,
+                  timelineFrameIndex,
+                  "1"
+                ),
+              }
+            : {}),
+        },
+      });
     },
 
     // Perform some statistics
@@ -3667,125 +4213,22 @@ export default {
       );
     },
 
-    // Make binary search in nodes
-    makeBinarySearchOnNodes(tokenID) {
-      let foundIndex = -1;
-      let low = 0;
-      let high = this.cytoNodes.length - 1;
-      let mid = -1;
-      while (foundIndex === -1 && low <= high) {
-        mid = Math.trunc((low + high) / 2);
-        switch (tokenID) {
-          case this.cytoNodes[low].data.id:
-            foundIndex = low;
-            break;
-
-          case this.cytoNodes[high].data.id:
-            foundIndex = high;
-            break;
-
-          case this.cytoNodes[mid].data.id:
-            foundIndex = mid;
-            break;
-
-          default:
-            if (tokenID > this.cytoNodes[mid].data.id) {
-              low = mid + 1;
-            } else {
-              high = mid - 1;
-            }
-            break;
-        }
-      }
-      return foundIndex;
-    },
-
-    // Add the node using insertion sort way
-    async addNodeUsingInsertionSort(
-      nodeID,
-      { label = "XXX", /*fileType = "", countryCode = "",*/ url = "" } = {}
-    ) {
-      let index = this.cytoNodes.length - 1;
-      let found = false;
-      while (index >= 0 && !found) {
-        this.cytoNodes[index].data.id <= nodeID ? (found = true) : index--;
-      }
-
-      // Add node ID to cluster structure
-      // console.log("Inside node, url = " + url);
-      let domainName = url === "" ? null : this.getDomainName(url); // TODO: This is a test, put the actual code
-      // console.log("Inside node, domainName = " + domainName);
-
-      // if (domainName !== null) {
-      if (domainName) {
-        // check if "nodeDomainCluster" has a key equal to "domainName"
-        if (this.nodeDomainCluster.hasOwnProperty(domainName)) {
-          // Push new entry in the array
-          this.nodeDomainCluster[domainName].nodeList.push(nodeID);
-        } else {
-          // Create new array
-          this.nodeDomainCluster[domainName] = {};
-          this.nodeDomainCluster[domainName].nodeList = [nodeID];
-
-          // Here, try to fetch favicon for each node
-          // TODO: Urgent! Comment favicon for now
-          // this.nodeDomainCluster[
-          //   domainName
-          // ].faviconData = await this.getFaviconDataURL(domainName);
-          // Here, in this point we should the part of loading the favicon
-          // TODO: Is it easy to do? Needs investigation?
-        }
-      }
-      // TODO: Add a handler for case such as 'https://s3.amazonaws.com/com.alexa.toolbar/atbp/4cE76z/download/index.htm'
-      // TODO: This is urgent task
-
-      let fileType = this.guessFileType(url); // Guess the file type
-      let countryCode = this.guessCountryCode(domainName); // Guess the country code
-
-      this.cytoNodes.splice(index + 1, 0, {
-        // TODO: Add the actual URL, actual file type
-        data: {
-          id: nodeID,
-          label: label, // label: will hold the short form
-          faviconData: domainName
-            ? this.nodeDomainCluster[domainName].faviconData
-            : "",
-          ...(label === "XXX"
-            ? {}
-            : {
-                url: url, //"https://vuetifyjs.com", // TODO: This is a test, put the actual code
-                fileType: fileType, //"pdf", // TODO: This is a test, put the actual code
-                countryCode: countryCode, //"eg", // TODO: This is a test, put the actual code
-                // FUTURE TODO: Try a better solution for handling
-                // parent: domainName ? domainName : undefined,
-                parent: domainName ? domainName.replace(/\./g, "_") : undefined,
-                // domain: this.getDomainName(url), // calculate domain name // RETHINK
-              }),
-        },
-      });
-      // TODO: Maybe you need to check that this condition will not fail
-      if (!this.rootNodeID) {
-        let tempURL = new URL(this.targetURL);
-        if (tempURL.href === url) {
-          // First condition is added in order to try to speed up the search if found
-          // This is the available way for getting root node as we have no way from link-serv requests
-          this.rootNodeID = nodeID;
-        }
-      }
-    },
-
     // Add domain nodes
-    addDomainNodes() {
+    addDomainNodes(nodeList) {
       for (const domain in this.nodeDomainCluster) {
-        this.cytoNodes.push({
+        nodeList.push({
+          group: "nodes",
           // Modifiy id to avoid using special characters in id field to avoid problems is selection
           // FUTURE TODO: Try a better solution for handling
           data: {
             id: domain.replace(/\./g, "_"),
             label: domain,
-            // faviconData: "",
+            favicon: "",
           },
         });
+        // setup "ciseClusterInfo" for using in CISE Layout
+        // "ciseClusterInfo" will be array of arrays as stated by CISE Layout documentation
+        this.ciseClusterInfo.push(this.nodeDomainCluster[domain].nodeList);
       }
     },
 
@@ -3794,10 +4237,13 @@ export default {
       let host = null; // "null" will be returned if an exception occurred
       let refinedHost = null;
       try {
-        host = new URL(url).host;
+        const tempURL = new URL(url);
+        host = tempURL.host;
         // If the above line works successfully, the host is value and we can then manipulation domain
         // refinedHost = this.refineDomain(host);
-        refinedHost = PLSUtilities.getDomain(host);
+        refinedHost = tempURL.protocol + "//" + PLSUtilities.getDomain(host);
+        // console.log("Inside getDomainName, url :  " + url);
+        // console.log("Inside getDomainName, host :  " + host);
         // console.log("Inside getDomainName, refinedHost :  " + refinedHost);
       } catch (exp) {
         // Print error
@@ -3807,75 +4253,13 @@ export default {
       }
     },
 
-    // New code
-    // Get favicon as a data URI in Base64 encoding
-    async getFaviconDataURL(url) {
-      // Proxy URL for overcoming CORS
-      const proxyUrl = "https://cors-anywhere.herokuapp.com/";
-      //const proxyUrl = "https://favicongrabber.com/download/";//https://favicongrabber.com/download/https://www.google.com/favicon.ico
-
-      let tempURL = {};
-      let faviconURL = "";
-      try {
-        // Check if the url has prefix
-        tempURL = new URL(
-          (!url.toLowerCase().startsWith("http") ? "http://" : "") + url
-        );
-        faviconURL = tempURL.protocol + "//" + tempURL.host + "/favicon.ico";
-      } catch (error) {
-        console.error(error.toString());
-      }
-      const imageURL = proxyUrl + faviconURL; // Final URL for retrieving image
-      console.log("imageURL : " + imageURL);
-
-      // const imgurl = document.getElementById("url");
-      const convertImgToBase64URL = (imageURL) => {
-        return new Promise((resolve, reject) => {
-          const img = new Image();
-          img.crossOrigin = "anonymous";
-          img.onload = () => {
-            let canvas = document.createElement("CANVAS");
-            const ctx = canvas.getContext("2d");
-            canvas.height = img.height;
-            canvas.width = img.width;
-            ctx.drawImage(img, 0, 0);
-            const dataURL = canvas.toDataURL();
-            canvas = null;
-            resolve(dataURL);
-          };
-          // Error Handler
-          img.onerror = (error) => {
-            console.error("Error : " + error.toString());
-            console.error(error);
-            reject(error);
-          };
-          img.src = imageURL;
-        });
-      };
-      return convertImgToBase64URL(imageURL);
-    },
-
-    // Load all needed favicons
-    async loadFaviconList() {
-      for (const domain in this.nodeDomainCluster) {
-        // This field will hold favicon data which will base64 encoding format
-        this.nodeDomainCluster[
-          domain
-        ].faviconData = await this.getFaviconDataURL(domain);
-        // TODO: This solution may be pour. Try to revamp this later
-        // for (const node in this.nodeDomainCluster[domain].nodeList) {
-        //   node.data("faviconData", this.nodeDomainCluster[domain].faviconData);
-        // }
-      }
-    },
-
     // Reset all UI and let it in a state before adding data
     reset() {
       // this.graphDepth = 1;
       // this.toolbarItems.depthGroup.controlList.graphDepth.value = 1;
       // this.zoomLevel = 1;
-      this.showGraphLocator = false;
-      this.showRightToolbar = false;
+      // this.showGraphLocator = false;
+      // this.showRightToolbar = false;
       // this.showUpperToolbar = false;
       this.showInfoBoard = false;
 
@@ -3891,9 +4275,8 @@ export default {
         this.cyto.removeData();
         this.cyto.elements().remove(); // Remove all data
         console.log("Cytoscape Cleaned up Successfully");
+        this.setLoadedGraphFlag(false);
       }
-      this.cytoNodes = [];
-      this.cytoEdges = [];
       this.rootNodeID = null;
       this.ciseClusterInfo = [];
       this.nodeDomainCluster = {};
@@ -3901,6 +4284,8 @@ export default {
 
     // Reload another graph with a new URL
     resetupURL(url) {
+      this.setProgressIndicatorVisibility(true); // Show progress bar
+      this.setProgressIndicatorMessage("Please wait...");
       // Here, try to change the url in the address bar to let the user use the direct url
       window.history.pushState(
         "",
@@ -3910,301 +4295,58 @@ export default {
       this.reset();
 
       this.setupURL(url);
-      this.loadVersionCountYearly();
+      this.loadVersionCountsYearly();
+      this.setProgressIndicatorVisibility(false); // Hide progress bar
     },
 
-    // Rebuild the graph and delete old graph if exists
-    rebuildGraph(graphAsJSON) {
-      this.resetNetwork(); // Clear anything if exists
-
-      this.buildGraph(graphAsJSON); // Build the graph
-    },
-
-    // Initialize Graph
-    async buildGraph(graphAsJSON) {
-      await this.parseLinkServData(graphAsJSON);
-
-      // Load all needed favicons
-      // await this.loadFaviconList();
-      //
-
-      // t1 = new Date().getTime()     // Second tick or the base
-
-      if (!this.cyto) {
-        this.cyto = cytoscape({
-          elements: {
-            nodes: this.cytoNodes,
-            edges: this.cytoEdges,
-          },
-          style: [
-            {
-              selector: "node",
-              style: {
-                ...this.normalNodeStyle, // Use spread operator for adding node style
-                // TODO: urgent!!background-image is commented for trying to solve the problem
-                // "background-image": function (node) {
-                //   return node.data("faviconData");
-                //   // return this.nodeDomainCluster[
-                //   //   this.getDomainName(node.data("url"))
-                //   // ].faviconData;
-                // },
-                // "background-fit": "cover",
-
-                // shape: "hexagon",
-                // "background-color": "red",
-                // // "background-image": [
-                // //   // "https://upload.wikimedia.org/wikipedia/commons/b/b4/High_above_the_Cloud_the_Sun_Stays_the_Same.jpg",
-                // //   "https://upload.wikimedia.org/wikipedia/commons/thumb/f/fc/Pigeon_silhouette_4874.svg/1000px-Pigeon_silhouette_4874.svg.png",
-                // //   "https://upload.wikimedia.org/wikipedia/commons/thumb/f/fc/Pigeon_silhouette_4874.svg/1000px-Pigeon_silhouette_4874.svg.png",
-                // // ],
-                // "background-fit": "cover  cover", // "none","contain", or "cover"
-                // "background-image-opacity": "1.0 0.2",
-                // "background-clip": "node none", // values: "node", or "none"
-                // "background-offset-x": "0 -100%", //measured in percent (e.g. 50%) or pixels (e.g. 10px).
-                // "background-offset-y": "0 0", //measured in percent (e.g. 50%) or pixels (e.g. 10px).
-                // "bounds-expansion": "20px", //bounds-expansions accepts 1 value (for all directions), 2 values, ([topAndBottom, leftAndRight]) or 4 values ([top, right, bottom, left])
-                // "background-fill": "linear-gradient",
-                // "background-gradient-stop-colors": "red yellow",
-                // "border-width": 1,
-                // "border-color": "black",
-                // TODO: Setup a switch statement for better handling labels if more than three options exist
-                label:
-                  this.getSelectedNodeLabelFormatIndex === 0
-                    ? "data(label)"
-                    : "data(url)",
-                // label: "data(label)", // Will Remain constant all the time
-              },
-            },
-            {
-              selector: ":parent",
-              style: {
-                "background-opacity": 0.333,
-              },
-            },
-            {
-              // Class for blinking components with path finder
-              selector: ".pathFinderIndicator",
-              style: {
-                "background-color": "#61bffc",
-                "line-color": "#61bffc",
-                "target-arrow-color": "#61bffc",
-                "transition-property":
-                  "background-color, line-color, target-arrow-color",
-                "transition-duration": "2s",
-              },
-            },
-            {
-              selector: "edge",
-              style: {
-                ...this.normalEdgeStyle,
-                // width: 1,
-                // "line-color": "#ccc",
-                // "target-arrow-color": "#ccc",
-                // "target-arrow-shape": "triangle",
-                // "curve-style": "straight", //"unbundled-bezier","bezier","haystack"
-              },
-            },
-          ],
-
-          // interaction options:
-          selectionType: "single", // valid values: 'single' and 'additive'
-          boxSelectionEnabled: false,
-
-          // rendering options:
-          headless: true,
-          textureOnViewport: true,
-          hideEdgesOnViewport: true, // while manipulation like panning, zooming, ..etc
-
-          // on layoutready
-          // ready: function () {
-          //   console.log("Graph is ready");
-          // },
-          // layout: {
-          //   // name: "concentric",
-          //   name: "grid",
-          // },
-        });
-        // Moved code from layout calculation to this point
-        this.cyto.nodes().on("select", this.onNodeBeingSelected);
-        this.cyto.nodes().on("unselect", this.onNodeBeingUnselected);
-        this.cyto.nodes().on("grabon", this.onNodeBeingGrabbedOn);
-        this.cyto.nodes().on("dragfreeon", this.onNodeBeingdragFreeOn);
-
-        this.cyto.one("render", this.onRenderOnce);
-
-        // TODO try to make it be initialized only once
-        // cytoscape.use(klay); // register extension
-        // cytoscape.use(avsdf); // register extension
-        // cytoscape.use(dagre); // register extension
-        // cytoscape.use(spread); // register extension
-        // cytoscape.use(coseBilkent); // register extension
-        cytoscape.use(cise); // register extension
-        // cytoscape.use(fcose); // register extension
-        // cytoscape.use(cola); // register extension
-        // cytoscape.use(euler); // register extension
-        // cytoscape.use(elk);// register extension
-      } else {
-        let tempNodeAndEdgeList = [];
-        this.cytoNodes.forEach((node) => {
-          tempNodeAndEdgeList.push({ group: "nodes", ...node });
-        });
-        this.cytoEdges.forEach((edge) => {
-          tempNodeAndEdgeList.push({ group: "edges", ...edge });
-        });
-        this.cyto.add(tempNodeAndEdgeList);
-        this.cyto.json({
-          style: [
-            {
-              selector: "node",
-              style: {
-                ...this.normalNodeStyle, // Use spread operator for adding node style
-                // TODO: urgent!!background-image is commented for trying to solve the problem
-                // "background-image": function (node) {
-                //   return node.data("faviconData");
-                //   // return this.nodeDomainCluster[
-                //   //   this.getDomainName(node.data("url"))
-                //   // ].faviconData;
-                // },
-                // "background-fit": "cover",
-
-                // shape: "hexagon",
-                // "background-color": "red",
-                // // "background-image": [
-                // //   // "https://upload.wikimedia.org/wikipedia/commons/b/b4/High_above_the_Cloud_the_Sun_Stays_the_Same.jpg",
-                // //   "https://upload.wikimedia.org/wikipedia/commons/thumb/f/fc/Pigeon_silhouette_4874.svg/1000px-Pigeon_silhouette_4874.svg.png",
-                // //   "https://upload.wikimedia.org/wikipedia/commons/thumb/f/fc/Pigeon_silhouette_4874.svg/1000px-Pigeon_silhouette_4874.svg.png",
-                // // ],
-                // "background-fit": "cover  cover", // "none","contain", or "cover"
-                // "background-image-opacity": "1.0 0.2",
-                // "background-clip": "node none", // values: "node", or "none"
-                // "background-offset-x": "0 -100%", //measured in percent (e.g. 50%) or pixels (e.g. 10px).
-                // "background-offset-y": "0 0", //measured in percent (e.g. 50%) or pixels (e.g. 10px).
-                // "bounds-expansion": "20px", //bounds-expansions accepts 1 value (for all directions), 2 values, ([topAndBottom, leftAndRight]) or 4 values ([top, right, bottom, left])
-                // "background-fill": "linear-gradient",
-                // "background-gradient-stop-colors": "red yellow",
-                // "border-width": 1,
-                // "border-color": "black",
-                // TODO: Setup a switch statement for better handling labels if more than three options exist
-                label:
-                  this.getSelectedNodeLabelFormatIndex === 0
-                    ? "data(label)"
-                    : "data(url)",
-                // label: "data(label)", // Will Remain constant all the time
-              },
-            },
-            {
-              selector: ":parent",
-              style: {
-                "background-opacity": 0.333,
-              },
-            },
-            {
-              // Class for blinking components with path finder
-              selector: ".pathFinderIndicator",
-              style: {
-                "background-color": "#61bffc",
-                "line-color": "#61bffc",
-                "target-arrow-color": "#61bffc",
-                "transition-property":
-                  "background-color, line-color, target-arrow-color",
-                "transition-duration": "2s",
-              },
-            },
-            {
-              selector: "edge",
-              style: {
-                ...this.normalEdgeStyle,
-                // width: 1,
-                // "line-color": "#ccc",
-                // "target-arrow-color": "#ccc",
-                // "target-arrow-shape": "triangle",
-                // "curve-style": "straight", //"unbundled-bezier","bezier","haystack"
-              },
-            },
-          ],
-        });
-      }
-      this.setupLayout();
-      // Save the depth
-      // this.currentGraphDepth = this.toolbarItems.depthGroup.controlList.graphDepth.value;
-      this.reciprocalCurrentGraphDepth = 1.0 / this.currentGraphDepth;
-    },
-
+    // ++++++++++++++++++++++++++++++++++++ NEW +++++++++++++++++++++++++++
     // Initialize cytoscape
-    async initCytoscape(onLayoutReady) {
+    // async initCytoscape_NEW(nodeList, edgeList, onLayoutReady) {
+    async buildGraphWithCytoscape(nodeList, edgeList, onLayoutReady) {
       if (!this.cyto) {
+        // let tempList = ;
         this.cyto = cytoscape({
           // container: this.$refs.graph_canvas_ref,
-          elements: {
-            nodes: this.cytoNodes,
-            edges: this.cytoEdges,
-          },
+          elements: nodeList.concat(edgeList), //tempList,
+          // elements: {
+          //   nodes: nodeList,
+          //   edges: edgeList,
+          // },
           style: [
             {
               selector: "node",
               style: {
                 ...this.normalNodeStyle, // Use spread operator for adding node style
-                // TODO: urgent!!background-image is commented for trying to solve the problem
-                // "background-image": function (node) {
-                //   return node.data("faviconData");
-                //   // return this.nodeDomainCluster[
-                //   //   this.getDomainName(node.data("url"))
-                //   // ].faviconData;
-                // },
-                // "background-fit": "cover",
-
-                // shape: "hexagon",
-                // "background-color": "red",
-                // // "background-image": [
-                // //   // "https://upload.wikimedia.org/wikipedia/commons/b/b4/High_above_the_Cloud_the_Sun_Stays_the_Same.jpg",
-                // //   "https://upload.wikimedia.org/wikipedia/commons/thumb/f/fc/Pigeon_silhouette_4874.svg/1000px-Pigeon_silhouette_4874.svg.png",
-                // //   "https://upload.wikimedia.org/wikipedia/commons/thumb/f/fc/Pigeon_silhouette_4874.svg/1000px-Pigeon_silhouette_4874.svg.png",
-                // // ],
-                // "background-fit": "cover  cover", // "none","contain", or "cover"
-                // "background-image-opacity": "1.0 0.2",
-                // "background-clip": "node none", // values: "node", or "none"
-                // "background-offset-x": "0 -100%", //measured in percent (e.g. 50%) or pixels (e.g. 10px).
-                // "background-offset-y": "0 0", //measured in percent (e.g. 50%) or pixels (e.g. 10px).
-                // "bounds-expansion": "20px", //bounds-expansions accepts 1 value (for all directions), 2 values, ([topAndBottom, leftAndRight]) or 4 values ([top, right, bottom, left])
-                // "background-fill": "linear-gradient",
-                // "background-gradient-stop-colors": "red yellow",
-                // "border-width": 1,
-                // "border-color": "black",
-                // TODO: Setup a switch statement for better handling labels if more than three options exist
                 label:
-                  this.getSelectedNodeLabelFormatIndex === 0
+                  // this.getSelectedNodeLabelFormatIndex === 0
+                  this.getNodeLabelFormatCurrentIndex === 0
                     ? "data(label)"
                     : "data(url)",
-                // label: "data(label)", // Will Remain constant all the time
               },
             },
             {
               selector: ":parent",
               style: {
-                "background-opacity": 0.333,
+                "background-opacity": 0.0,
+                "border-color": "#333333",
               },
             },
-            {
-              // Class for blinking components with path finder
-              selector: ".pathFinderIndicator",
-              style: {
-                "background-color": "#61bffc",
-                "line-color": "#61bffc",
-                "target-arrow-color": "#61bffc",
-                "transition-property":
-                  "background-color, line-color, target-arrow-color",
-                "transition-duration": "2s",
-              },
-            },
+            // {
+            //   // Class for blinking components with path finder
+            //   selector: ".pathFinderIndicator",
+            //   style: {
+            //     "background-color": "#61bffc",
+            //     "line-color": "#61bffc",
+            //     "target-arrow-color": "#61bffc",
+            //     "transition-property":
+            //       "background-color, line-color, target-arrow-color",
+            //     "transition-duration": "2s",
+            //   },
+            // },
             {
               selector: "edge",
               style: {
                 ...this.normalEdgeStyle,
-                // width: 1,
-                // "line-color": "#ccc",
-                // "target-arrow-color": "#ccc",
-                // "target-arrow-shape": "triangle",
-                // "curve-style": "straight", //"unbundled-bezier","bezier","haystack"
               },
             },
           ],
@@ -4217,142 +4359,37 @@ export default {
           headless: true,
           textureOnViewport: true,
           hideEdgesOnViewport: true, // while manipulation like panning, zooming, ..etc
-
-          // on layoutready
-          // ready: function () {
-          //   console.log("Graph is ready");
-          // },
-          // layout: {
-          //   // name: "concentric",
-          //   name: "grid",
-          // },
         });
         // Moved code from layout calculation to this point
         this.cyto.nodes().on("select", this.onNodeBeingSelected);
         this.cyto.nodes().on("unselect", this.onNodeBeingUnselected);
-        this.cyto.nodes().on("grabon", this.onNodeBeingGrabbedOn);
-        this.cyto.nodes().on("dragfreeon", this.onNodeBeingdragFreeOn);
+        // this.cyto.nodes().on("grabon", this.onNodeBeingGrabbedOn);
+        // this.cyto.nodes().on("dragfreeon", this.onNodeBeingdragFreeOn);
 
         this.cyto.one("render", this.onRenderOnce);
 
         // TODO try to make it be initialized only once
-        // cytoscape.use(klay); // register extension
-        // cytoscape.use(avsdf); // register extension
-        // cytoscape.use(dagre); // register extension
-        // cytoscape.use(spread); // register extension
-        // cytoscape.use(coseBilkent); // register extension
+        cytoscape.use(avsdf); // register extension
+        cytoscape.use(coseBilkent); // register extension
+        cytoscape.use(cola); // register extension
+        cytoscape.use(euler); // register extension
         cytoscape.use(cise); // register extension
-        // cytoscape.use(fcose); // register extension
-        // cytoscape.use(cola); // register extension
-        // cytoscape.use(euler); // register extension
+        cytoscape.use(klay); // register extension
+        cytoscape.use(dagre); // register extension
+        cytoscape.use(spread); // register extension
+        cytoscape.use(fcose); // register extension
         // cytoscape.use(elk);// register extension
-      } else {
-        let tempNodeAndEdgeList = [];
-        this.cytoNodes.forEach((node) => {
-          tempNodeAndEdgeList.push({ group: "nodes", ...node });
-        });
-        this.cytoEdges.forEach((edge) => {
-          tempNodeAndEdgeList.push({ group: "edges", ...edge });
-        });
-        this.cyto.add(tempNodeAndEdgeList);
-        this.cyto.json({
-          style: [
-            {
-              selector: "node",
-              style: {
-                ...this.normalNodeStyle, // Use spread operator for adding node style
-                // TODO: urgent!!background-image is commented for trying to solve the problem
-                // "background-image": function (node) {
-                //   return node.data("faviconData");
-                //   // return this.nodeDomainCluster[
-                //   //   this.getDomainName(node.data("url"))
-                //   // ].faviconData;
-                // },
-                // "background-fit": "cover",
 
-                // shape: "hexagon",
-                // "background-color": "red",
-                // // "background-image": [
-                // //   // "https://upload.wikimedia.org/wikipedia/commons/b/b4/High_above_the_Cloud_the_Sun_Stays_the_Same.jpg",
-                // //   "https://upload.wikimedia.org/wikipedia/commons/thumb/f/fc/Pigeon_silhouette_4874.svg/1000px-Pigeon_silhouette_4874.svg.png",
-                // //   "https://upload.wikimedia.org/wikipedia/commons/thumb/f/fc/Pigeon_silhouette_4874.svg/1000px-Pigeon_silhouette_4874.svg.png",
-                // // ],
-                // "background-fit": "cover  cover", // "none","contain", or "cover"
-                // "background-image-opacity": "1.0 0.2",
-                // "background-clip": "node none", // values: "node", or "none"
-                // "background-offset-x": "0 -100%", //measured in percent (e.g. 50%) or pixels (e.g. 10px).
-                // "background-offset-y": "0 0", //measured in percent (e.g. 50%) or pixels (e.g. 10px).
-                // "bounds-expansion": "20px", //bounds-expansions accepts 1 value (for all directions), 2 values, ([topAndBottom, leftAndRight]) or 4 values ([top, right, bottom, left])
-                // "background-fill": "linear-gradient",
-                // "background-gradient-stop-colors": "red yellow",
-                // "border-width": 1,
-                // "border-color": "black",
-                // TODO: Setup a switch statement for better handling labels if more than three options exist
-                label:
-                  this.getSelectedNodeLabelFormatIndex === 0
-                    ? "data(label)"
-                    : "data(url)",
-                // label: "data(label)", // Will Remain constant all the time
-              },
-            },
-            {
-              selector: ":parent",
-              style: {
-                "background-opacity": 0.333,
-              },
-            },
-            {
-              // Class for blinking components with path finder
-              selector: ".pathFinderIndicator",
-              style: {
-                "background-color": "#61bffc",
-                "line-color": "#61bffc",
-                "target-arrow-color": "#61bffc",
-                "transition-property":
-                  "background-color, line-color, target-arrow-color",
-                "transition-duration": "2s",
-              },
-            },
-            {
-              selector: "edge",
-              style: {
-                ...this.normalEdgeStyle,
-                // width: 1,
-                // "line-color": "#ccc",
-                // "target-arrow-color": "#ccc",
-                // "target-arrow-shape": "triangle",
-                // "curve-style": "straight", //"unbundled-bezier","bezier","haystack"
-              },
-            },
-          ],
-        });
+        // if (!this.cyto.cxtmenu) {
+        //   cytoscape.use(cxtmenu); // register extension
+        // }
+      } else {
+        this.addSubgraph(nodeList, edgeList); // Add the
+        this.applyStyle();
       }
+      this.setLoadedGraphFlag(true);
       // New code
       this.setupLayout(onLayoutReady);
-    },
-
-    // Toggle calendar visibility
-    toggleCalendar(activeItems) {
-      if (activeItems.length === 0) {
-        // console.log("Close calendar");
-        this.calendarShown = false;
-        document.addEventListener("mousemove", this.saveMousePosition);
-      } else {
-        // Are we selecting "View Snapshots in Calendar"?
-        if (this.selectedGraphLocatorModeIndex === 1) {
-          this.calendarYear = activeItems[0].parent.value;
-          this.calendarMonth = activeItems[0].value;
-          this.calendarTitle = activeItems[0].name + " - " + this.calendarYear;
-
-          this.calendarShown = true;
-          document.removeEventListener("mousemove", this.saveMousePosition);
-        } else if (this.selectedGraphLocatorModeIndex === 0) {
-          // Are we selecting "Snapshot Selection in Tree"?
-          // Load the specified snapshot
-          this.loadGraphWithSnapshot(activeItems[0].value);
-        }
-        // document.removeEventListener("mousemove", this.saveMousePosition);
-      }
     },
 
     // Save mouse position
@@ -4381,12 +4418,12 @@ export default {
     // Open new tab in browser and visit node URL at archive
     visitNodeURL(nodeID) {
       // Compose url for displaying url
-      const baseURL = "http://web.archive.bibalex.org/web/"; // Base URL for displaying at archive
+      // const baseURL = "http://web.archive.bibalex.org/web/"; // Base URL for displaying at archive
+      const baseURL = "http://web.archive.org/web/"; // Base URL for displaying at archive
       let url =
         baseURL +
-        this.currentGraphSnapshotDate
-          .toISOString()
-          .replace(/([-:T]|\S{5}$)/g, "") +
+        // this.selectedTimestamp.toISOString().replace(/([-:T]|\S{5}$)/g, "") +
+        this.selectedTimestamp +
         "/" +
         this.cyto.$(`#${nodeID}`).data("url");
       console.log("Inside visitNodeURL: url = " + url);
@@ -4402,106 +4439,593 @@ export default {
     // Setup Graph Layout
     setupLayout(onLayoutReady) {
       let rect = this.$refs.graph_canvas_ref.getBoundingClientRect();
-      this.layout = this.cyto.elements().layout(
-        {
-          // Old working code
-          // // Special case for cise layout
-          // ...(this.selectedLayoutParams.name === "cise"
-          //   ? {
-          //       // clusters: function (node) {
-          //       //   return null;
-          //       // },
-          //       clusters: this.ciseClusterInfo,
-          //     }
-          //   : {}),
+      // @@@@@@@@@@@
+      // CISE Layout
+      // @@@@@@@@@@@
+      // this.layout = this.cyto.elements().layout({
+      //   // Old working code
+      //   // // Special case for cise layout
+      //   // ...(this.selectedLayoutParams.name === "cise"
+      //   //   ? {
+      //   //       // clusters: function (node) {
+      //   //       //   return null;
+      //   //       // },
+      //   //       clusters: this.ciseClusterInfo,
+      //   //     }
+      //   //   : {}),
 
-          // ...this.selectedLayoutParams,
+      //   // ...this.selectedLayoutParams,
 
-          // For now, use the layout options of "cise"
-          // source: https://github.com/iVis-at-Bilkent/cytoscape.js-cise
-          // -------- Mandatory parameters --------
-          name: "cise",
+      //   // For now, use the layout options of "cise"
+      //   // source: https://github.com/iVis-at-Bilkent/cytoscape.js-cise
+      //   // -------- Mandatory parameters --------
+      //   name: "cise",
 
-          // ClusterInfo can be a 2D array contaning node id's or a function that returns cluster ids.
-          // For the 2D array option, the index of the array indicates the cluster ID for all elements in
-          // the collection at that index. Unclustered nodes must NOT be present in this array of clusters.
-          //
-          // For the function, it would be given a Cytoscape node and it is expected to return a cluster id
-          // corresponding to that node. Returning negative numbers, null or undefined is fine for unclustered
-          // nodes.
-          // e.g
-          // Array:                                     OR          function(node){
-          //  [ ['n1','n2','n3'],                                       ...
-          //    ['n5','n6']                                         }
-          //    ['n7', 'n8', 'n9', 'n10'] ]
-          clusters: this.ciseClusterInfo,
-          // clusters: function(node){return null;},
+      //   // ClusterInfo can be a 2D array contaning node id's or a function that returns cluster ids.
+      //   // For the 2D array option, the index of the array indicates the cluster ID for all elements in
+      //   // the collection at that index. Unclustered nodes must NOT be present in this array of clusters.
+      //   //
+      //   // For the function, it would be given a Cytoscape node and it is expected to return a cluster id
+      //   // corresponding to that node. Returning negative numbers, null or undefined is fine for unclustered
+      //   // nodes.
+      //   // e.g
+      //   // Array:                                     OR          function(node){
+      //   //  [ ['n1','n2','n3'],                                       ...
+      //   //    ['n5','n6']                                         }
+      //   //    ['n7', 'n8', 'n9', 'n10'] ]
+      //   clusters: this.ciseClusterInfo,
+      //   // clusters: function(node){return null;},
 
-          // -------- Optional parameters --------
-          // Whether to animate the layout
-          // - true : Animate while the layout is running
-          // - false : Just show the end result
-          // - 'end' : Animate directly to the end result
-          animate: false,
+      //   // -------- Optional parameters --------
+      //   // Whether to animate the layout
+      //   // - true : Animate while the layout is running
+      //   // - false : Just show the end result
+      //   // - 'end' : Animate directly to the end result
+      //   animate: false,
 
-          // number of ticks per frame; higher is faster but more jerky
-          refresh: 10,
+      //   // number of ticks per frame; higher is faster but more jerky
+      //   refresh: 10,
 
-          // Animation duration used for animate:'end'
-          animationDuration: undefined,
+      //   // Animation duration used for animate:'end'
+      //   animationDuration: undefined,
 
-          // Easing for animate:'end'
-          animationEasing: undefined,
+      //   // Easing for animate:'end'
+      //   animationEasing: undefined,
 
-          // Whether to fit the viewport to the repositioned graph
-          // true : Fits at end of layout for animate:false or animate:'end'
-          fit: true,
+      //   // Whether to fit the viewport to the repositioned graph
+      //   // true : Fits at end of layout for animate:false or animate:'end'
+      //   fit: true,
 
-          // Padding in rendered co-ordinates around the layout
-          padding: 30,
+      //   // Padding in rendered co-ordinates around the layout
+      //   padding: 30,
 
-          // separation amount between nodes in a cluster
-          // note: increasing this amount will also increase the simulation time
-          nodeSeparation: 12.5,
+      //   // separation amount between nodes in a cluster
+      //   // note: increasing this amount will also increase the simulation time
+      //   nodeSeparation: 80,//60,//40,//30,//25,//20,//12.5,
 
-          // Inter-cluster edge length factor
-          // (2.0 means inter-cluster edges should be twice as long as intra-cluster edges)
-          idealInterClusterEdgeLengthCoefficient: 1.4,
+      //   // Inter-cluster edge length factor
+      //   // (2.0 means inter-cluster edges should be twice as long as intra-cluster edges)
+      //   idealInterClusterEdgeLengthCoefficient: 1.4,
 
-          // Whether to pull on-circle nodes inside of the circle
-          allowNodesInsideCircle: false,
+      //   // Whether to pull on-circle nodes inside of the circle
+      //   // allowNodesInsideCircle: false,
+      //   allowNodesInsideCircle: false,
 
-          // Max percentage of the nodes in a circle that can move inside the circle
-          maxRatioOfNodesInsideCircle: 0.1,
+      //   // Max percentage of the nodes in a circle that can move inside the circle
+      //   // maxRatioOfNodesInsideCircle: 0.1,
+      //   maxRatioOfNodesInsideCircle: 0.1,
 
-          // - Lower values give looser springs
-          // - Higher values give tighter springs
-          springCoeff: 0.45,
+      //   // - Lower values give looser springs
+      //   // - Higher values give tighter springs
+      //   springCoeff: 0.45,//1.0,//0.01,//1.0,//0.45,
 
-          // Node repulsion (non overlapping) multiplier
-          nodeRepulsion: 4500,
+      //   // Node repulsion (non overlapping) multiplier
+      //   nodeRepulsion: 10000,//1000,//100,//10,//1,//18000,//9000,//4500,
 
-          // Gravity force (constant)
-          gravity: 0.25,
+      //   // Gravity force (constant)
+      //   gravity: 1.0,//10.0,//1.0,//0.1,//0.01,//0.001,//5.0,//1.0,//0.25,
+      //   /* It seems that the working values <= 1.0 */
 
-          // Gravity range (constant)
-          gravityRange: 3.8,
+      //   // Gravity range (constant)
+      //   gravityRange: 5.0,//10.0,//1.0,//0.1,//3.8,
 
-          // Layout event callbacks; equivalent to `layout.one('layoutready', callback)` for example
-          // ready: function(){}, // on layoutready
-          // stop: function(){}, // on layoutstop
+      //   // Layout event callbacks; equivalent to `layout.one('layoutready', callback)` for example
+      //   // ready: function(){}, // on layoutready
+      //   // stop: function(){}, // on layoutstop
 
-          //////////////////////////////////////////////////////////////////////////////////////////////////////////////
-          // End of parameters
-          //////////////////////////////////////////////////////////////////////////////////////////////////////////////
-          boundingBox: {
-            x1: rect.left,
-            y1: rect.top,
-            w: rect.width,
-            h: rect.height,
-          },
-        }
-      );
+      //   //////////////////////////////////////////////////////////////////////////////////////////////////////////////
+      //   // End of parameters
+      //   //////////////////////////////////////////////////////////////////////////////////////////////////////////////
+      //   boundingBox: {
+      //     x1: rect.left,
+      //     y1: rect.top,
+      //     w: rect.width,
+      //     h: rect.height,
+      //   },
+      // });
+      // @@@@@@@@@@@@@@@@@
+      // Concentric Layout
+      // @@@@@@@@@@@@@@@@@
+      // this.layout = this.cyto.elements().layout({
+      //   name: 'concentric',
+
+      //   fit: true, // whether to fit the viewport to the graph
+      //   padding: 30, // the padding on fit
+      //   startAngle: 3 / 2 * Math.PI, // where nodes start in radians
+      //   sweep: undefined, // how many radians should be between the first and last node (defaults to full circle)
+      //   clockwise: true, // whether the layout should go clockwise (true) or counterclockwise/anticlockwise (false)
+      //   equidistant: false, // whether levels have an equal radial distance betwen them, may cause bounding box overflow
+      //   minNodeSpacing: 60,//30,//10, // min spacing between outside of nodes (used for radius adjustment)
+      //   boundingBox: {
+      //     x1: rect.left,
+      //     y1: rect.top,
+      //     w: rect.width,
+      //     h: rect.height,
+      //   }, // constrain layout bounds; { x1, y1, x2, y2 } or { x1, y1, w, h }
+      //   avoidOverlap: true, // prevents node overlap, may overflow boundingBox if not enough space
+      //   nodeDimensionsIncludeLabels: true, // Excludes the label when calculating node bounding boxes for the layout algorithm
+      //   height: undefined, // height of layout area (overrides container height)
+      //   width: undefined, // width of layout area (overrides container width)
+      //   spacingFactor: undefined, // Applies a multiplicative factor (>0) to expand or compress the overall area that the nodes take up
+      //   concentric: function( node ){ // returns numeric value for each node, placing higher nodes in levels towards the centre
+      //   return node.degree();
+      //   },
+      //   levelWidth: function( nodes ){ // the variation of concentric values in each level
+      //   return nodes.maxDegree() / 4;
+      //   },
+      //   animate: false, // whether to transition the node positions
+      //   animationDuration: 500, // duration of animation in ms if enabled
+      //   animationEasing: undefined, // easing of animation if enabled
+      //   animateFilter: function ( node, i ){ return true; }, // a function that determines whether the node should be animated.  All nodes animated by default on animate enabled.  Non-animated nodes are positioned immediately when the layout starts
+      //   ready: undefined, // callback on layoutready
+      //   stop: undefined, // callback on layoutstop
+      //   // transform: function (node, position ){ return position; } // transform a given node position. Useful for changing flow direction in discrete layouts
+      // });
+      // @@@@@@@@@@@@@@@@@@@@@@
+      // Euler Layout (working)
+      // @@@@@@@@@@@@@@@@@@@@@@
+      this.layout = this.cyto.elements().layout({
+        name: "euler",
+
+        // The ideal length of a spring
+        // - This acts as a hint for the edge length
+        // - The edge length can be longer or shorter if the forces are set to extreme values
+        springLength: (edge) => 100,
+
+        // Hooke's law coefficient
+        // - The value ranges on [0, 1]
+        // - Lower values give looser springs
+        // - Higher values give tighter springs
+        springCoeff: (edge) => 0.0001, //0,//0.0008,    // Never let it be 0
+
+        // The mass of the node in the physics simulation
+        // - The mass affects the gravity node repulsion/attraction
+        mass: (node) => 4,
+
+        // Coulomb's law coefficient
+        // - Makes the nodes repel each other for negative values
+        // - Makes the nodes attract each other for positive values
+        gravity: -20, //-1.2,
+
+        // A force that pulls nodes towards the origin (0, 0)
+        // Higher values keep the components less spread out
+        pull: 0.001,
+
+        // Theta coefficient from Barnes-Hut simulation
+        // - Value ranges on [0, 1]
+        // - Performance is better with smaller values
+        // - Very small values may not create enough force to give a good result
+        theta: 0.666,
+
+        // Friction / drag coefficient to make the system stabilise over time
+        dragCoeff: 0.02,
+
+        // When the total of the squared position deltas is less than this value, the simulation ends
+        movementThreshold: 1,
+
+        // The amount of time passed per tick
+        // - Larger values result in faster runtimes but might spread things out too far
+        // - Smaller values produce more accurate results
+        timeStep: 20,
+
+        // The number of ticks per frame for animate:true
+        // - A larger value reduces rendering cost but can be jerky
+        // - A smaller value increases rendering cost but is smoother
+        refresh: 10,
+
+        // Whether to animate the layout
+        // - true : Animate while the layout is running
+        // - false : Just show the end result
+        // - 'end' : Animate directly to the end result
+        animate: false,
+
+        // Animation duration used for animate:'end'
+        animationDuration: undefined,
+
+        // Easing for animate:'end'
+        animationEasing: undefined,
+
+        // Maximum iterations and time (in ms) before the layout will bail out
+        // - A large value may allow for a better result
+        // - A small value may make the layout end prematurely
+        // - The layout may stop before this if it has settled
+        maxIterations: 8000,
+        maxSimulationTime: 8000,
+
+        // Prevent the user grabbing nodes during the layout (usually with animate:true)
+        ungrabifyWhileSimulating: false,
+
+        // Whether to fit the viewport to the repositioned graph
+        // true : Fits at end of layout for animate:false or animate:'end'; fits on each frame for animate:true
+        fit: true,
+
+        // Padding in rendered co-ordinates around the layout
+        padding: 30,
+
+        // Constrain layout bounds with one of
+        // - { x1, y1, x2, y2 }
+        // - { x1, y1, w, h }
+        // - undefined / null : Unconstrained
+        boundingBox: {
+          x1: rect.left,
+          y1: rect.top,
+          w: rect.width,
+          h: rect.height,
+        },
+
+        // Layout event callbacks; equivalent to `layout.one('layoutready', callback)` for example
+        // ready: function(){}, // on layoutready
+        // stop: function(){}, // on layoutstop
+
+        // Whether to randomize the initial positions of the nodes
+        // true : Use random positions within the bounding box
+        // false : Use the current node positions as the initial positions
+        /* By experimantation, settings to true speeds up the algorithm layaout. Setting to false, let it take very long time that almost leads to crash */
+        randomize: true,
+      });
+      // @@@@@@@@@@@@
+      // avsdf Layout
+      // @@@@@@@@@@@@
+      // this.layout = this.cyto.elements().layout({
+      //   name: 'avsdf',
+
+      //   // Called on `layoutready`
+      //   ready: function () {
+      //   },
+      //   // Called on `layoutstop`
+      //   stop: function () {
+      //   },
+      //   // number of ticks per frame; higher is faster but more jerky
+      //   refresh: 30,
+      //   // Whether to fit the network view after when done
+      //   fit: true,
+      //   // Padding on fit
+      //   padding: 10,
+      //   // Prevent the user grabbing nodes during the layout (usually with animate:true)
+      //   ungrabifyWhileSimulating: false,
+      //   // Type of layout animation. The option set is {'during', 'end', false}
+      //   animate: false,
+      //   // Duration for animate:end
+      //   animationDuration: 500,
+      //   // How apart the nodes are
+      //   nodeSeparation: 100
+      // });
+      // @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+      // cose-bilkent Layout (working without compound)
+      // @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+      // this.layout = this.cyto.elements().layout({
+      //   name: 'cose-bilkent',
+      //   // // Called on `layoutready`
+      //   // ready: function () {
+      //   // },
+      //   // // Called on `layoutstop`
+      //   // stop: function () {
+      //   // },
+      //   // 'draft', 'default' or 'proof"
+      //   // - 'draft' fast cooling rate
+      //   // - 'default' moderate cooling rate
+      //   // - "proof" slow cooling rate
+      //   quality: 'proof',
+      //   // Whether to include labels in node dimensions. Useful for avoiding label overlap
+      //   nodeDimensionsIncludeLabels: true,
+      //   // number of ticks per frame; higher is faster but more jerky
+      //   refresh: 30,
+      //   // Whether to fit the network view after when done
+      //   fit: true,
+      //   // Padding on fit
+      //   padding: 10,
+      //   // Whether to enable incremental mode
+      //   randomize: true,
+      //   // Node repulsion (non overlapping) multiplier
+      //   nodeRepulsion: 1000000,//4500,
+      //   // Ideal (intra-graph) edge length
+      //   idealEdgeLength: 200,
+      //   // Divisor to compute edge forces
+      //   edgeElasticity: 0.45,
+      //   // Nesting factor (multiplier) to compute ideal edge length for inter-graph edges
+      //   nestingFactor: 0.1,
+      //   // Gravity force (constant)
+      //   gravity: 0.25,
+      //   // Maximum number of iterations to perform
+      //   numIter: 2500,
+      //   // Whether to tile disconnected nodes
+      //   tile: true,
+      //   // Type of layout animation. The option set is {'during', 'end', false}
+      //   animate: false,
+      //   // Duration for animate:end
+      //   animationDuration: 500,
+      //   // Amount of vertical space to put between degree zero nodes during tiling (can also be a function)
+      //   tilingPaddingVertical: 10,
+      //   // Amount of horizontal space to put between degree zero nodes during tiling (can also be a function)
+      //   tilingPaddingHorizontal: 10,
+      //   // Gravity range (constant) for compounds
+      //   gravityRangeCompound: 1.5,
+      //   // Gravity force (constant) for compounds
+      //   gravityCompound: 1.0,
+      //   // Gravity range (constant)
+      //   gravityRange: 3.8,
+      //   // Initial cooling factor for incremental layout
+      //   initialEnergyOnIncremental: 0.5
+      // });
+      // @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+      // cola layout (working without compound)
+      // @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+      // this.layout = this.cyto.elements().layout({
+      //   name: 'cola',
+      //   animate: false, // whether to show the layout as it's running
+      //   refresh: 1, // number of ticks per frame; higher is faster but more jerky
+      //   maxSimulationTime: 4000, // max length in ms to run the layout
+      //   ungrabifyWhileSimulating: false, // so you can't drag nodes during layout
+      //   fit: true, // on every layout reposition of nodes, fit the viewport
+      //   padding: 30, // padding around the simulation
+      //   boundingBox: {  // constrain layout bounds; { x1, y1, x2, y2 } or { x1, y1, w, h }
+      //     x1: rect.left,
+      //     y1: rect.top,
+      //     w: rect.width,
+      //     h: rect.height,
+      //   },
+      //   nodeDimensionsIncludeLabels: true, // whether labels should be included in determining the space used by a node
+
+      //   // layout event callbacks
+      //   // ready: function(){}, // on layoutready
+      //   // stop: function(){}, // on layoutstop
+
+      //   // positioning options
+      //   randomize: true, // use random node positions at beginning of layout
+      //   avoidOverlap: true, // if true, prevents overlap of node bounding boxes
+      //   handleDisconnected: true, // if true, avoids disconnected components from overlapping
+      //   convergenceThreshold: 0.01, // when the alpha value (system energy) falls below this value, the layout stops
+      //   nodeSpacing: function( node ){ return 80; }, // extra spacing around nodes
+      //   flow: undefined, // use DAG/tree flow layout if specified, e.g. { axis: 'y', minSeparation: 30 }
+      //   alignment: undefined, // relative alignment constraints on nodes, e.g. {vertical: [[{node: node1, offset: 0}, {node: node2, offset: 5}]], horizontal: [[{node: node3}, {node: node4}], [{node: node5}, {node: node6}]]}
+      //   gapInequalities: undefined, // list of inequality constraints for the gap between the nodes, e.g. [{"axis":"y", "left":node1, "right":node2, "gap":25}]
+
+      //   // different methods of specifying edge length
+      //   // each can be a constant numerical value or a function like `function( edge ){ return 2; }`
+      //   edgeLength: undefined, // sets edge length directly in simulation
+      //   edgeSymDiffLength: undefined, // symmetric diff edge length in simulation
+      //   edgeJaccardLength: undefined, // jaccard edge length in simulation
+
+      //   // iterations of cola algorithm; uses default values on undefined
+      //   unconstrIter: undefined, // unconstrained initial layout iterations
+      //   userConstIter: undefined, // initial layout iterations with user-specified constraints
+      //   allConstIter: undefined, // initial layout iterations with all constraints including non-overlap
+
+      // });
+      // @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+      // fcose  Layout (works only without headless mode 😠, and didn't returned any results in about 40 min 😢 )
+      // @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+      // this.layout = this.cyto.elements().layout({
+      //   name: 'fcose',
+      //   // 'draft', 'default' or 'proof'
+      //   // - "draft" only applies spectral layout
+      //   // - "default" improves the quality with incremental layout (fast cooling rate)
+      //   // - "proof" improves the quality with incremental layout (slow cooling rate)
+      //   quality: "default",
+      //   // Use random node positions at beginning of layout
+      //   // if this is set to false, then quality option must be "proof"
+      //   randomize: true,
+      //   // Whether or not to animate the layout
+      //   animate: false,
+      //   // Duration of animation in ms, if enabled
+      //   animationDuration: 1000,
+      //   // Easing of animation, if enabled
+      //   animationEasing: undefined,
+      //   // Fit the viewport to the repositioned nodes
+      //   fit: true,
+      //   // Padding around layout
+      //   padding: 30,
+      //   // Whether to include labels in node dimensions. Valid in "proof" quality
+      //   nodeDimensionsIncludeLabels: false,
+      //   // Whether or not simple nodes (non-compound nodes) are of uniform dimensions
+      //   uniformNodeDimensions: false,
+      //   // Whether to pack disconnected components - valid only if randomize: true
+      //   packComponents: true,
+      //   // Layout step - all, transformed, enforced, cose - for debug purpose only
+      //   step: "all",
+
+      //   /* spectral layout options */
+
+      //   // False for random, true for greedy sampling
+      //   samplingType: true,
+      //   // Sample size to construct distance matrix
+      //   sampleSize: 25,
+      //   // Separation amount between nodes
+      //   nodeSeparation: 75,
+      //   // Power iteration tolerance
+      //   piTol: 0.0000001,
+
+      //   /* incremental layout options */
+
+      //   // Node repulsion (non overlapping) multiplier
+      //   nodeRepulsion: node => 4500,
+      //   // Ideal edge (non nested) length
+      //   idealEdgeLength: edge => 50,
+      //   // Divisor to compute edge forces
+      //   edgeElasticity: edge => 0.45,
+      //   // Nesting factor (multiplier) to compute ideal edge length for nested edges
+      //   nestingFactor: 0.1,
+      //   // Maximum number of iterations to perform
+      //   numIter: 2500,
+      //   // For enabling tiling
+      //   tile: true,
+      //   // Represents the amount of the vertical space to put between the zero degree members during the tiling operation(can also be a function)
+      //   tilingPaddingVertical: 10,
+      //   // Represents the amount of the horizontal space to put between the zero degree members during the tiling operation(can also be a function)
+      //   tilingPaddingHorizontal: 10,
+      //   // Gravity force (constant)
+      //   gravity: 0.25,
+      //   // Gravity range (constant) for compounds
+      //   gravityRangeCompound: 1.5,
+      //   // Gravity force (constant) for compounds
+      //   gravityCompound: 1.0,
+      //   // Gravity range (constant)
+      //   gravityRange: 3.8,
+      //   // Initial cooling factor for incremental layout
+      //   initialEnergyOnIncremental: 0.3,
+
+      //   /* constraint options */
+
+      //   // Fix desired nodes to predefined positions
+      //   // [{nodeId: 'n1', position: {x: 100, y: 200}}, {...}]
+      //   fixedNodeConstraint: undefined,
+      //   // Align desired nodes in vertical/horizontal direction
+      //   // {vertical: [['n1', 'n2'], [...]], horizontal: [['n2', 'n4'], [...]]}
+      //   alignmentConstraint: undefined,
+      //   // Place two nodes relatively in vertical/horizontal direction
+      //   // [{top: 'n1', bottom: 'n2', gap: 100}, {left: 'n3', right: 'n4', gap: 75}, {...}]
+      //   relativePlacementConstraint: undefined,
+
+      //   /* layout event callbacks */
+      //   // ready: () => {}, // on layoutready
+      //   // stop: () => {} // on layoutstop
+      //   boundingBox: {  // constrain layout bounds; { x1, y1, x2, y2 } or { x1, y1, w, h }
+      //     x1: rect.left,
+      //     y1: rect.top,
+      //     w: rect.width,
+      //     h: rect.height,
+      //   },
+      // });
+      // @@@@@@@@@@@@@@@@@
+      // spread  Layout
+      // @@@@@@@@@@@@@@@@@
+      // this.layout = this.cyto.elements().layout({
+      //   name: 'spread',
+      //   animate: false, // Whether to show the layout as it's running
+      //   ready: undefined, // Callback on layoutready
+      //   stop: undefined, // Callback on layoutstop
+      //   fit: true, // Reset viewport to fit default simulationBounds
+      //   minDist: 20, // Minimum distance between nodes
+      //   padding: 20, // Padding
+      //   expandingFactor: -1.0, // If the network does not satisfy the minDist
+      //   // criterium then it expands the network of this amount
+      //   // If it is set to -1.0 the amount of expansion is automatically
+      //   // calculated based on the minDist, the aspect ratio and the
+      //   // number of nodes
+      //   prelayout: { name: 'cose' }, // Layout options for the first phase
+      //   maxExpandIterations: 10,//4, // Maximum number of expanding iterations
+      //   boundingBox: {  // constrain layout bounds; { x1, y1, x2, y2 } or { x1, y1, w, h }
+      //     x1: rect.left,
+      //     y1: rect.top,
+      //     w: rect.width,
+      //     h: rect.height,
+      //   },
+      //   randomize: true // Uses random initial node positions on true
+      // });
+      // @@@@@@@@@@@@@@@@@
+      // klay Layout
+      // @@@@@@@@@@@@@@@@@
+      // this.layout = this.cyto.elements().layout({
+      //   name: 'klay',
+      //   nodeDimensionsIncludeLabels: false, // Boolean which changes whether label dimensions are included when calculating node dimensions
+      //   fit: true, // Whether to fit
+      //   padding: 20, // Padding on fit
+      //   animate: false, // Whether to transition the node positions
+      //   animateFilter: function( node, i ){ return true; }, // Whether to animate specific nodes when animation is on; non-animated nodes immediately go to their final positions
+      //   animationDuration: 500, // Duration of animation in ms if enabled
+      //   animationEasing: undefined, // Easing of animation if enabled
+      //   // transform: function( node, pos ){ return pos; }, // A function that applies a transform to the final node position
+      //   // ready: undefined, // Callback on layoutready
+      //   // stop: undefined, // Callback on layoutstop
+      //   klay: {
+      //     // Following descriptions taken from http://layout.rtsys.informatik.uni-kiel.de:9444/Providedlayout.html?algorithm=de.cau.cs.kieler.klay.layered
+      //     addUnnecessaryBendpoints: false, // Adds bend points even if an edge does not change direction.
+      //     aspectRatio: 1.6, // The aimed aspect ratio of the drawing, that is the quotient of width by height
+      //     borderSpacing: 20, // Minimal amount of space to be left to the border
+      //     compactComponents: false, // Tries to further compact components (disconnected sub-graphs).
+      //     crossingMinimization: 'LAYER_SWEEP', // Strategy for crossing minimization.
+      //     /* LAYER_SWEEP The layer sweep algorithm iterates multiple times over the layers, trying to find node orderings that minimize the number of crossings. The algorithm uses randomization to increase the odds of finding a good result. To improve its results, consider increasing the Thoroughness option, which influences the number of iterations done. The Randomization seed also influences results.
+      //     INTERACTIVE Orders the nodes of each layer by comparing their positions before the layout algorithm was started. The idea is that the relative order of nodes as it was before layout was applied is not changed. This of course requires valid positions for all nodes to have been set on the input graph before calling the layout algorithm. The interactive layer sweep algorithm uses the Interactive Reference Point option to determine which reference point of nodes are used to compare positions. */
+      //     cycleBreaking: 'GREEDY', // Strategy for cycle breaking. Cycle breaking looks for cycles in the graph and determines which edges to reverse to break the cycles. Reversed edges will end up pointing to the opposite direction of regular edges (that is, reversed edges will point left if edges usually point right).
+      //     /* GREEDY This algorithm reverses edges greedily. The algorithm tries to avoid edges that have the Priority property set.
+      //     INTERACTIVE The interactive algorithm tries to reverse edges that already pointed leftwards in the input graph. This requires node and port coordinates to have been set to sensible values.*/
+      //     direction: 'UNDEFINED', // Overall direction of edges: horizontal (right / left) or vertical (down / up)
+      //     /* UNDEFINED, RIGHT, LEFT, DOWN, UP */
+      //     edgeRouting: 'ORTHOGONAL', // Defines how edges are routed (POLYLINE, ORTHOGONAL, SPLINES)
+      //     edgeSpacingFactor: 0.5, // Factor by which the object spacing is multiplied to arrive at the minimal spacing between edges.
+      //     feedbackEdges: false, // Whether feedback edges should be highlighted by routing around the nodes.
+      //     fixedAlignment: 'NONE', // Tells the BK node placer to use a certain alignment instead of taking the optimal result.  This option should usually be left alone.
+      //     /* NONE Chooses the smallest layout from the four possible candidates.
+      //     LEFTUP Chooses the left-up candidate from the four possible candidates.
+      //     RIGHTUP Chooses the right-up candidate from the four possible candidates.
+      //     LEFTDOWN Chooses the left-down candidate from the four possible candidates.
+      //     RIGHTDOWN Chooses the right-down candidate from the four possible candidates.
+      //     BALANCED Creates a balanced layout from the four possible candidates. */
+      //     inLayerSpacingFactor: 1.0, // Factor by which the usual spacing is multiplied to determine the in-layer spacing between objects.
+      //     layoutHierarchy: false, // Whether the selected layouter should consider the full hierarchy
+      //     linearSegmentsDeflectionDampening: 0.3, // Dampens the movement of nodes to keep the diagram from getting too large.
+      //     mergeEdges: false, // Edges that have no ports are merged so they touch the connected nodes at the same points.
+      //     mergeHierarchyCrossingEdges: true, // If hierarchical layout is active, hierarchy-crossing edges use as few hierarchical ports as possible.
+      //     nodeLayering:'NETWORK_SIMPLEX', // Strategy for node layering.
+      //     /* NETWORK_SIMPLEX This algorithm tries to minimize the length of edges. This is the most computationally intensive algorithm. The number of iterations after which it aborts if it hasn't found a result yet can be set with the Maximal Iterations option.
+      //     LONGEST_PATH A very simple algorithm that distributes nodes along their longest path to a sink node.
+      //     INTERACTIVE Distributes the nodes into layers by comparing their positions before the layout algorithm was started. The idea is that the relative horizontal order of nodes as it was before layout was applied is not changed. This of course requires valid positions for all nodes to have been set on the input graph before calling the layout algorithm. The interactive node layering algorithm uses the Interactive Reference Point option to determine which reference point of nodes are used to compare positions. */
+      //     nodePlacement:'BRANDES_KOEPF', // Strategy for Node Placement
+      //     /* BRANDES_KOEPF Minimizes the number of edge bends at the expense of diagram size: diagrams drawn with this algorithm are usually higher than diagrams drawn with other algorithms.
+      //     LINEAR_SEGMENTS Computes a balanced placement.
+      //     INTERACTIVE Tries to keep the preset y coordinates of nodes from the original layout. For dummy nodes, a guess is made to infer their coordinates. Requires the other interactive phase implementations to have run as well.
+      //     SIMPLE Minimizes the area at the expense of... well, pretty much everything else. */
+      //     randomizationSeed: 1, // Seed used for pseudo-random number generators to control the layout algorithm; 0 means a new seed is generated
+      //     routeSelfLoopInside: false, // Whether a self-loop is routed around or inside its node.
+      //     separateConnectedComponents: true, // Whether each connected component should be processed separately
+      //     spacing: 20, // Overall setting for the minimal amount of space to be left between objects
+      //     thoroughness: 7 // How much effort should be spent to produce a nice layout..
+      //   },
+      //   priority: function( edge ){ return null; }, // Edges with a non-nil value are skipped when greedy edge cycle breaking is enabled
+      // });
+      // @@@@@@@@@@@@@@@@@
+      // dagre  Layout
+      // @@@@@@@@@@@@@@@@@
+      // this.layout = this.cyto.elements().layout({
+      //   name: 'dagre',
+      //   // dagre algo options, uses default value on undefined
+      //   nodeSep: 20, // the separation between adjacent nodes in the same rank
+      //   edgeSep: undefined, // the separation between adjacent edges in the same rank
+      //   rankSep: undefined, // the separation between each rank in the layout
+      //   rankDir: undefined, // 'TB' for top to bottom flow, 'LR' for left to right,
+      //   ranker: 'network-simplex', // Type of algorithm to assign a rank to each node in the input graph. Possible values: 'network-simplex', 'tight-tree' or 'longest-path'
+      //   minLen: function( edge ){ return 1; }, // number of ranks to keep between the source and target of the edge
+      //   edgeWeight: function( edge ){ return 1; }, // higher weight edges are generally made shorter and straighter than lower weight edges
+
+      //   // general layout options
+      //   fit: true, // whether to fit to viewport
+      //   padding: 30, // fit padding
+      //   spacingFactor: undefined, // Applies a multiplicative factor (>0) to expand or compress the overall area that the nodes take up
+      //   nodeDimensionsIncludeLabels: false, // whether labels should be included in determining the space used by a node
+      //   animate: false, // whether to transition the node positions
+      //   animateFilter: function( node, i ){ return true; }, // whether to animate specific nodes when animation is on; non-animated nodes immediately go to their final positions
+      //   animationDuration: 500, // duration of animation in ms if enabled
+      //   animationEasing: undefined, // easing of animation if enabled
+      //   boundingBox: {  // constrain layout bounds; { x1, y1, x2, y2 } or { x1, y1, w, h }
+      //     x1: rect.left,
+      //     y1: rect.top,
+      //     w: rect.width,
+      //     h: rect.height,
+      //   },
+      //   // transform: function( node, pos ){ return pos; }, // a function that applies a transform to the final node position
+      //   // ready: function(){}, // on layoutready
+      //   // stop: function(){} // on layoutstop
+      // });
       this.layout.on("layoutstop", (event) => {
         console.log("layoutstop promise fulfilled");
         if (!this.cyto.container()) {
@@ -4514,7 +5038,117 @@ export default {
         // perform some statistics Info
         this.readStatisticsData();
 
-        // There is a strange problem that let the div part of the graph expand, so I'll let it be initiallized only onr time
+        let savedThis = this;
+
+        if (!this.cyto.cxtmenu) {
+          console.log("Initializing cxtmenu plugin...");
+          cytoscape.use(cxtmenu); // register extension
+          this.cxtmenu1 = this.cyto.cxtmenu({
+            selector: "[^specialTemp]", //"node[timestamp]", //'node, edge',
+
+            commands: (node) => {
+              let arr = [];
+              arr.push({
+                content: "Load more",
+                select: function (node) {
+                  console.log(
+                    "Load more for node with timestamp = " +
+                      node.data("timestamp")
+                  );
+                  // return;
+                  // savedThis.loadNodeChildren(node);
+                },
+                enabled: false, //node.data("timestamp") !== undefined,
+              });
+              arr.push({
+                content: "Fit",
+                select: function (node) {
+                  savedThis.fitNode(node); // View this node
+                },
+                enabled: true,
+              });
+              arr.push({
+                content: "Show Info",
+                select: function (node) {
+                  // savedThis.toggleInfoBoard();
+                  if (savedThis.selectedNode !== node) {
+                    savedThis.selectedNode = node;
+                  }
+                  if (!savedThis.showInfoBoard) {
+                    savedThis.showInfoBoard = true;
+                  }
+                  // console.log("Showing Info for node " + node.id());
+                },
+                enabled: true,
+              });
+              arr.push({
+                content: "Collapse",
+                select: function (node) {
+                  savedThis.collapseNode(node);
+                },
+                enabled: true,
+              });
+              return arr;
+            },
+            zIndex: 9999, // the z-index of the ui div
+          });
+          this.cxtmenu2 = this.cyto.cxtmenu({
+            // selector: "[id *= '_TEMP']", //"node[timestamp]", //'node, edge',
+            selector: "[specialTemp]", //"node[timestamp]", //'node, edge',
+
+            commands: (node) => {
+              let arr = [];
+              arr.push({
+                content: "Load more",
+                select: function (node) {
+                  console.log(
+                    "Load more for node with timestamp = " +
+                      node.data("timestamp")
+                  );
+                  // return;
+                  // savedThis.loadNodeChildren(node);
+                },
+                enabled: false, //node.data("timestamp") !== undefined,
+              });
+              arr.push({
+                content: "Fit",
+                select: function (node) {
+                  savedThis.fitNode(node); // View this node
+                  console.log("Fitting for node " + node.id());
+                },
+                enabled: true,
+              });
+              arr.push({
+                content: "Show Info",
+                select: function (node) {
+                  // savedThis.toggleInfoBoard();
+                  if (savedThis.selectedNode !== node) {
+                    savedThis.selectedNode = node;
+                  }
+                  if (!savedThis.showInfoBoard) {
+                    savedThis.showInfoBoard = true;
+                  }
+                  // console.log("Showing Info for node " + node.id());
+                },
+                enabled: true,
+              });
+              arr.push({
+                content: "Expand",
+                select: function (node) {
+                  savedThis.expandNode(node);
+                },
+                enabled: true,
+              });
+              return arr;
+            },
+            zIndex: 9999, // the z-index of the ui div
+          });
+          console.log("Initializing cxtmenu plugin done successfully");
+        } else {
+          console.warn('"cxtmenu" plugin has been already registered');
+        }
+        // Finally, we can conclude that this way is wrong in initialization
+        // There is a strange problem that let the div part of the graph expand, so I'll let it be initiallized only one time
         // Try to initialize module (Now it's commented to as the error message states that it's already set)
         // if (!this.expandCollapseExtansionInitialized) {
         //   try {
@@ -4541,6 +5175,28 @@ export default {
         // });
         // this.cytoExpClpAPI = this.cyto.expandCollapse("get");
         // console.log("Initializing collapse-expand plugin done successfully");
+
+        // Check if plugin "expand-collapse" is initialized, and initialize it if need
+        // if (!this.cyto.expandCollapse) {
+        //   console.log("Initializing collapse-expand plugin...");
+        //   cytoscape.use(expandCollapse);
+        //   this.cyto.expandCollapse({
+        //     // layoutBy: {
+        //     //   name: "cise", //"cose-bilkent",
+        //     //   animate: "false",
+        //     //   randomize: false,
+        //     //   fit: true,
+        //     // },
+        //     undoable: false, // if set to false, no need for installing plugin. If true, plugin have to be installed
+        //     cueEnabled: false,
+        //     // expandCueImage: "",
+        //     // collapseCueImage: "",
+        //     animate: false,
+        //     zIndex: 0,
+        //   });
+        //   this.cytoExpClpAPI = this.cyto.expandCollapse("get");
+        //   console.log("Initializing collapse-expand plugin done successfully");
+        // }
         if (onLayoutReady) {
           // TODO: Urgent!! The parameter is hard coded!!Turn it into a general one immediately
           onLayoutReady(0);
@@ -4563,18 +5219,21 @@ export default {
       // Original Working Code for testing dataset test
       this.setupURL(this.$route.query.url); //(this.setupURL(this.$route.params.url);) // NOT WORKING
       // Will be executed when the DOM is ready
-      this.loadVersionCountYearly();
+      this.loadVersionCountsYearly();
       document.addEventListener("mousemove", this.saveMousePosition);
       // let color = this.getBackgroundColor;
-      this.$refs.graph_canvas_ref.style.backgroundColor = `rgba(${this.getBackgroundColor.r},${this.getBackgroundColor.g},${this.getBackgroundColor.b},${this.getBackgroundColor.a})`; 
+      this.$refs.graph_canvas_ref.style.backgroundColor = "#FCFCFC"; //`rgba(${this.getBackgroundColor.r},${this.getBackgroundColor.g},${this.getBackgroundColor.b},${this.getBackgroundColor.a})`;
       // End of Original Working Code for testing dataset test
 
+      // Show the initial message about the graph locator usage
+      this.popupMessage = this.hintTipList.graphLocator.initial;
+      this.popupMessageTitle = "Graph Locator";
+      this.showPopupMessage = true;
+
       // Setup initially here edge color
-      this.normalEdgeStyle[
-        "line-color"
-      ] = `hsl(${this.getEdgeColor.h},${this.getEdgeColor.s * 100}%,${
-        this.getEdgeColor.l * 100
-      }%)`;
+      // this.normalEdgeStyle["line-color"] = `hsl(${this.getEdgeColor.h},${
+      //   this.getEdgeColor.s * 100
+      // }%,${this.getEdgeColor.l * 100}%)`;
       PLSUtilities.parse(PLSUtilities.PLSData, punycode.toASCII);
     });
   },
@@ -4584,9 +5243,23 @@ export default {
     if (this.cyto) {
       this.resetTimeline();
       this.resetNetwork();
-      console.log("Cleaning Up Cytoscape...");
+      console.log("Destroying Cytoscape...");
+      if (this.cxtmenu1) {
+        console.log("Destroying this.cxtmenu1...");
+        this.cxtmenu1.destroy();
+        this.cxtmenu1 = undefined
+      }
+      if (this.cxtmenu2) {
+        console.log("Destroying this.cxtmenu2...");
+        this.cxtmenu2.destroy();
+        this.cxtmenu2 = undefined
+      }
+      if (this.cyto.cxtmenu) {
+        this.cyto.cxtmenu = undefined // Can this work??
+      }
+      cytoscape.use = () => {}; // Can this work?
       this.cyto.destroy();
-      console.log("Cytoscape Cleaned up Successfully");
+      console.log("Cytoscape destroyed Successfully");
     }
   },
 };
@@ -4599,20 +5272,38 @@ export default {
   padding: 0%;
   /* justify-self: center; */
 }
-/* aside {
-  width: 17% !important;
-} */
+
 .aside-title {
   background-color: rgba(0, 0, 0, 0.5);
-  padding: 10px;
+  padding: 15px;
   margin-bottom: 15px;
   border-bottom: 1px dotted lightgray;
+}
+
+.graph-locator-show-button {
+  /* position: absolute; */
+  top: 20%;
+  transform: rotate(-90deg) translateY(-80px);
+  z-index: 3;
+}
+
+.settings-show-button {
+  top: 20%;
+  right: 0;
+  transform: rotate(-90deg) translateY(20px);
+  z-index: 3;
+}
+
+.info-board-show-button {
+  bottom: 0;
+  right: 0;
+  z-index: 3;
 }
 
 .graph-div {
   width: 100%;
   height: 100%;
-  overflow-y: auto;
+  overflow-y: hidden;
 }
 
 #graph_canvas_ref {
@@ -4628,14 +5319,36 @@ export default {
   /* This is acceptable workaround*/
 }
 
-/* Right Toolbar */
-.right-toolbar {
+.graph-locator {
   position: absolute;
   width: 10%;
-  height: fit-content; /* 100%; */ /* This was working good */
+  height: 100%; /*fit-content;*/ /* This was working good */
   /* background-color: brown; */
-  right: 0;
-  top: 20%;
+  /* right: 0; */
+  /* top: 20%; */
   z-index: 3;
+}
+
+aside {
+  width: 315px !important;
+}
+
+.v-icon.v-icon.v-icon--link {
+  color: #fff !important;
+}
+
+.theme--dark.v-treeview {
+  color: #fff;
+  background-color: #404040;
+  border: 1px solid #595959 !important;
+  overflow-y: auto;
+}
+
+.build-timeline {
+  margin-top: 20px;
+}
+
+.notranslate.mdi-search-web {
+  color: red !important;
 }
 </style>

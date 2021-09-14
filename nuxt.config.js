@@ -61,6 +61,7 @@ export default {
   ** https://nuxtjs.org/guide/plugins
   */
   plugins: [
+    '~/plugins/vuetifyMask.client.js'
   ],
   /*
   ** Auto import components

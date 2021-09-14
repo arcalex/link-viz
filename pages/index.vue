@@ -9,10 +9,11 @@
         <URLGraphSeeker
           color="#666"
           background-color="#FFFFFF"
-          initialURL="https://www.cdc.gov/"
+          initialURL='HTTP://mbb.bibalex.org/000001'
           @readyURL="goToGraphPage"
         />
       </div>
+      <!-- initialURL="https://www.cdc.gov/" -->
       <p
         class="justify-center home-brief"
         style="text-align: center; display: grid"
@@ -65,11 +66,11 @@ export default {
   components: {
     URLGraphSeeker,
   },
-  head() {
-    return {
-      title: "Archive Visualization",
-    };
-  },
+  // head() {
+  //   return {
+  //     title: "Archive Visualization",
+  //   };
+  // },
   methods: {
     // Navigate to graph page
     goToGraphPage(url) {

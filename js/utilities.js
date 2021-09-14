@@ -53,5 +53,11 @@ export const utilities = {
             nextStart = str.indexOf(substr, nextStart)
         }
         return (nextStart === -1) ? -1 : nextStart - 1;
-    }    
+    }
+    ,
+    // // Find the number of digit counts for entered integer
+    // getDigitCount: function (num) {
+    //     let n = Number(num)
+    //     if ()
+    // }
 }
