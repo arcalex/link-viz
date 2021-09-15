@@ -21,7 +21,7 @@
       type="month"
       dark
       ref="calendar"
-      @click:event="showSnapshotList"
+      @click:event="fetchWithCache"
     ></v-calendar>
 
     <!-- Snapshot List -->
@@ -179,6 +179,7 @@ export default {
     // Actions of veux
     ...mapActions({
       setProgressIndicatorVisibility: "setProgressIndicatorVisibility",
+      setSnapshotListCache: "setSnapshotListCache",
     }),
 
     // Fill Calendar with events count per day
@@ -207,26 +208,55 @@ export default {
       // });
     },
 
+    // ***** FETCH WITH Cache *****
+    fetchWithCache({ nativeEvent, event }) {
+      // Get (Year Month Day) of the click event and concatenate them to store it as id for snapshot
+      let yearMonthDay = event.start.getFullYear().toString();
+      yearMonthDay = yearMonthDay.concat(
+        event.start.getMonth() + 1,
+        event.start.getDate()
+      );
+
+      let cached = [];
+
+      // Get Cached snapshots
+      this.getSnapshotListCache.forEach(function(snap) {
+        if (snap.id === yearMonthDay) {
+          cached.push(snap);
+        }
+      });
+
+      // Check if there exists Cached data
+      if (cached.length) {
+        // Assign Catched data to snapshotList to show them
+        console.log("CACHED");
+        this.snapshotList = cached;
+        this.snapshotDialogShown = true;
+        console.log("END CACHED");
+      } else {
+        // There is no cached data, so go to fetch them
+        console.log("FETCHING");
+        nativeEvent.stopPropagation();
+        this.selectedDay = event.start.getDate();
+        this.showSnapshotList(yearMonthDay);
+        console.log("END FETCHING");
+      }
+      console.log("END FETCHING WITH CACHE");
+    },
+    // ***** END *****
+
     // Show snapshots list for given year, month, and day
-    async showSnapshotList({ nativeEvent, event }) {
+    async showSnapshotList(yearMonthDay) {
       // console.log(
       //   "CP#1: this.snapshotList.length : " + this.snapshotList.length
       // );
-      nativeEvent.stopPropagation();
+      // nativeEvent.stopPropagation();
       // // Save mouse position
       // this.mousePosX = nativeEvent.clientX;
       // this.mousePosY = nativeEvent.clientY;
 
-      this.snapshotList.splice(0, this.snapshotList); // This line cause an error!!I don't know why????
       this.snapshotList = []; // This is correct
-      // console.log(
-      //   "CP#2: this.snapshotList.length : " + this.snapshotList.length
-      // );
-      // console.log("nativeEvent : ");
-      // console.log(nativeEvent);
-      // console.log("event : ");
-      // console.log(event);
-      this.selectedDay = event.start.getDate();
+
       // Progress Bar
       this.setProgressIndicatorVisibility(true);
       // Progress Bar
@@ -249,12 +279,13 @@ export default {
               label.substr(4, 2);
 
             this.snapshotList.push({
-              // shortTimestamped: oneSnapshot.substring(
-              //   oneSnapshot.indexOf("T") + 1,
-              //   oneSnapshot.indexOf("Z")
-              // ),
-              // longTimestamped: oneSnapshot,
+              id: yearMonthDay, // ID to retrieve data when cached
               value: oneSnapshot, // Actual value
+              name: label,
+            });
+            this.setSnapshotListCache({
+              id: yearMonthDay,
+              value: oneSnapshot,
               name: label,
             });
             // console.log("snapshot : " + oneSnapshot);
@@ -265,6 +296,7 @@ export default {
           this.setProgressIndicatorVisibility(false);
           // Progress Bar
         });
+
       this.snapshotDialogShown = true;
     },
 
@@ -327,6 +359,7 @@ export default {
     // Load linkserv request URL HUB
     ...mapGetters({
       getLinkservRequestURLHub: "getLinkservRequestURLHub",
+      getSnapshotListCache: "getSnapshotListCache",
     }),
   },
   watch: {

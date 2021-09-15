@@ -1,6 +1,16 @@
 <template>
   <client-only>
     <v-container fluid class="home-container">
+      <!-- Use it to show any message for the user -->
+      <MessageBox
+        :title="fetchingBoxMessage.title"
+        :message="fetchingBoxMessage.message"
+        :type="fetchingBoxMessage.type"
+        :position="fetchingBoxMessage.position"
+        :border="fetchingBoxMessage.border"
+        v-show="getShowMessageBox"
+      />
+
       <Toolbar :toolbarItems="toolbarItems" />
 
       <v-scroll-x-transition>
@@ -17,14 +27,14 @@
       <v-slide-x-transition>
         <Settings v-show="showSettings" @hideSettings="showSettings = false" />
       </v-slide-x-transition>
-      <PopupMessage
+      <!-- <PopupMessage
         v-show="showPopupMessage"
         :arrowDirection="showArrowDirection"
         :message="popupMessage"
         :title="popupMessageTitle"
         :position="popupMessagePos"
         @hidePopupMessage="showPopupMessage = false"
-      />
+      /> -->
       <v-scroll-x-transition>
         <v-btn
           absolute
@@ -45,7 +55,20 @@
       >
         <div class="d-flex flex-column" style="height: 100%">
           <v-row no-gutters class="aside-title flex-grow-0">
-            <h4 class="white--text">Graph Locator</h4>
+            <h4 class="white--text mr-2">Graph Locator</h4>
+            <v-tooltip bottom>
+              <template v-slot:activator="{ on, attrs }">
+                <v-icon color="orange" dark v-bind="attrs" v-on="on">
+                  mdi-information-outline
+                </v-icon>
+              </template>
+              <span
+                >Use the graph locator for selecting snapshot to view a
+                graph.<br />
+                Or, select multiple snapshots for viewing timeline
+                animation.</span
+              >
+            </v-tooltip>
             <v-spacer></v-spacer>
             <v-col cols="auto">
               <v-btn
@@ -339,7 +362,11 @@
 
       <!-- The first of div is needed for solving the problem of height increase that push down the footer -->
       <div class="graph-div">
-        <div ref="graph_canvas_ref" id="graph_canvas_ref"></div>
+        <div
+          ref="graph_canvas_ref"
+          id="graph_canvas_ref"
+          style="position: absolute;"
+        ></div>
       </div>
       <a href style="display: none" ref="screenshot_a"></a>
     </v-container>
@@ -374,6 +401,7 @@
  * graph page for selecting and loading graph given a URL
  */
 import { mapActions, mapGetters } from "vuex";
+import MessageBox from "@/components/MessageBox";
 import EventCalendar from "@/components/EventCalendar";
 import InfoBoard from "@/components/InfoBoard";
 import GraphTimeline from "@/components/GraphTimeline";
@@ -451,7 +479,7 @@ import expandCollapse from "cytoscape-expand-collapse"; // More info at https://
 /*! Home: https://github.com/gorhill/publicsuffixlist.js -- GPLv3 APLv2 */
 
 /*! http://mths.be/punycode v1.2.3 by @mathias */
-(function (o) {
+(function(o) {
   function e(o) {
     throw RangeError(L[o]);
   }
@@ -474,7 +502,7 @@ import expandCollapse from "cytoscape-expand-collapse"; // More info at https://
     return t;
   }
   function u(o) {
-    return n(o, function (o) {
+    return n(o, function(o) {
       var e = "";
       return (
         o > 65535 &&
@@ -589,12 +617,12 @@ import expandCollapse from "cytoscape-expand-collapse"; // More info at https://
     return E.join("");
   }
   function s(o) {
-    return t(o, function (o) {
+    return t(o, function(o) {
       return E.test(o) ? l(o.slice(4).toLowerCase()) : o;
     });
   }
   function a(o) {
-    return t(o, function (o) {
+    return t(o, function(o) {
       return O.test(o) ? "xn--" + d(o) : o;
     });
   }
@@ -635,7 +663,7 @@ import expandCollapse from "cytoscape-expand-collapse"; // More info at https://
     }),
     "function" == typeof define && "object" == typeof define.amd && define.amd)
   )
-    define(function () {
+    define(function() {
       return g;
     });
   else if (p && !p.nodeType)
@@ -697,12 +725,12 @@ const monthStringList = [
 
 // ID generator using closure function. For more information about function closures refer to:
 // https://www.w3schools.com/js/js_function_closures.asp
-var generateID = (function () {
+var generateID = (function() {
   var nodeID = 0;
   var edgeID = 0;
   var nodeAndEdge = 0;
   var othersID = 0;
-  return function (type) {
+  return function(type) {
     switch (type) {
       case "n":
         return nodeID++;
@@ -767,6 +795,7 @@ class MinMaxPair {
 
 export default {
   components: {
+    MessageBox,
     EventCalendar,
     InfoBoard,
     ProgressIndicator,
@@ -787,6 +816,14 @@ export default {
     var self = this;
 
     return {
+      //Messasge Box props
+      fetchingBoxMessage: {
+        title: "",
+        message: "",
+        position: "top-right",
+        border: "left",
+        type: "info",
+      },
       graphPropertyList: [], // Graph data for displaying in the info board
       // original code
       // timelinePropertyList: [], // timeline data for displaying in the info board
@@ -1055,7 +1092,7 @@ export default {
             zoomIn: {
               // Zoom In
               type: "button",
-              action: function () {
+              action: function() {
                 self.zoomInOnGraph();
                 // console.log("Zoom In");
               },
@@ -1066,7 +1103,7 @@ export default {
             zoomOut: {
               // Zoom Out
               type: "button",
-              action: function () {
+              action: function() {
                 self.zoomOutOnGraph();
                 // console.log("Zoom Out");
               },
@@ -1077,7 +1114,7 @@ export default {
             resetView: {
               // Reset View
               type: "button",
-              action: function () {
+              action: function() {
                 self.resetGraphView();
                 // console.log("Reset View");
               },
@@ -1118,7 +1155,7 @@ export default {
           controlList: {
             nodeFilter: {
               type: "textField",
-              onInputUpdate: function (text) {
+              onInputUpdate: function(text) {
                 self.updateNodeFilter(text);
               },
               disabled: true,
@@ -1146,7 +1183,7 @@ export default {
           controlList: {
             saveScreenshot: {
               type: "button",
-              action: function () {
+              action: function() {
                 self.saveScreenshot();
                 // console.log("Save screenshot");
               },
@@ -1364,7 +1401,13 @@ export default {
       const opacity = coloringAction.color.a; // get opacity
       let selected = this.cyto.$(":selected"); // get selected node if exists
       // switch (this.getNodeColoringMethodEnum[coloringAction.methodIndex]) {
-      switch (Object.keys(this.getNodeColoringMethodEnum)[Object.values(this.getNodeColoringMethodEnum).indexOf(coloringAction.methodIndex)]) {
+      switch (
+        Object.keys(this.getNodeColoringMethodEnum)[
+          Object.values(this.getNodeColoringMethodEnum).indexOf(
+            coloringAction.methodIndex
+          )
+        ]
+      ) {
         case "all":
           // Color all graph nodes
           this.cyto.$("node").style({
@@ -1418,9 +1461,9 @@ export default {
 
           break;
 
-          default:
-            // This shouldn't be reached
-            throw new Error('Undefined node coloring method') 
+        default:
+          // This shouldn't be reached
+          throw new Error("Undefined node coloring method");
       }
     },
 
@@ -1648,6 +1691,8 @@ export default {
 
   computed: {
     ...mapGetters({
+      getShowMessageBox: "getShowMessageBox",
+      getScreenshotResolution: "getScreenshotResolution",
       getLoadedGraphFlag: "getLoadedGraphFlag",
       getLinkservRequestURLHub: "getLinkservRequestURLHub",
       getBackgroundColor: "getBackgroundColor",
@@ -1685,6 +1730,7 @@ export default {
   methods: {
     // Actions of veux
     ...mapActions({
+      setShowMessageBox: "setShowMessageBox",
       setLoadedGraphFlag: "setLoadedGraphFlag",
       setSelectedNodeFlag: "setSelectedNodeFlag",
       setLinkservRequestURLHub: "setLinkservRequestURLHub",
@@ -1761,9 +1807,8 @@ export default {
           // Color All edges with uniform color
           this.cyto.$("edge").style({
             // "line-color": `rgb(${this.getEdgeColor.rgba.r},${this.getEdgeColor.rgba.g},${this.getEdgeColor.rgba.b})`,
-            "line-color": `hsl(${this.getEdgeColor.h},${
-              this.getEdgeColor.s * 100
-            }%,${this.getEdgeColor.l * 100}%)`,
+            "line-color": `hsl(${this.getEdgeColor.h},${this.getEdgeColor.s *
+              100}%,${this.getEdgeColor.l * 100}%)`,
           });
           break;
 
@@ -1981,9 +2026,8 @@ export default {
             const depth = edge.data("depth");
             if (depth >= 0) {
               edge.style({
-                "line-color": `hsl(${this.getEdgeColor.h}, ${
-                  100 - depth * this.reciprocalCurrentGraphDepth
-                }%, 50%)`,
+                "line-color": `hsl(${this.getEdgeColor.h}, ${100 -
+                  depth * this.reciprocalCurrentGraphDepth}%, 50%)`,
                 "line-style": "solid", // Valid values: "solid", "dotted", or "dashed"
               });
             } else {
@@ -1995,10 +2039,9 @@ export default {
           }
         : (edge) => {
             edge.style({
-              "line-color": `hsl(${this.getEdgeColor.h}, ${
-                100 -
-                Math.abs(edge.data("depth")) * this.reciprocalCurrentGraphDepth
-              }%, 50%)`,
+              "line-color": `hsl(${this.getEdgeColor.h}, ${100 -
+                Math.abs(edge.data("depth")) *
+                  this.reciprocalCurrentGraphDepth}%, 50%)`,
               "line-style": "solid", // Valid values: "solid", "dotted", or "dashed"
             });
           };
@@ -2024,9 +2067,8 @@ export default {
         // Depth attribute is added to edge, so looping through edges will be straight forward
         this.cyto.$("edge[depth >= 0]").forEach((edge) => {
           edge.style({
-            "line-color": `hsl(${this.getEdgeColor.h}, ${
-              100 - edge.data("depth") * this.reciprocalCurrentGraphDepth
-            }%, 50%)`,
+            "line-color": `hsl(${this.getEdgeColor.h}, ${100 -
+              edge.data("depth") * this.reciprocalCurrentGraphDepth}%, 50%)`,
             "line-style": "solid", // Valid values: "solid", "dotted", or "dashed"
           });
         });
@@ -2039,10 +2081,9 @@ export default {
           this.cyto
             .$(`edge[depth < 0][depth != ${Number.MIN_SAFE_INTEGER}]`)
             .style({
-              "line-color": `hsl(${this.getEdgeColor.h}, ${
-                100 -
-                Math.abs(edge.data("depth")) * this.reciprocalCurrentGraphDepth
-              }%, 50%)`,
+              "line-color": `hsl(${this.getEdgeColor.h}, ${100 -
+                Math.abs(edge.data("depth")) *
+                  this.reciprocalCurrentGraphDepth}%, 50%)`,
               "line-style": "solid", // Valid values: "solid", "dotted", or "dashed"
             });
           // For disjoint graph(s), let their color be constant
@@ -2076,10 +2117,9 @@ export default {
           .forEach((edge) => {
             edge.style({
               // "line-color": `rgb(${this.getEdgeColor.rgba.r},${this.getEdgeColor.rgba.g},${this.getEdgeColor.rgba.b})`,
-              "line-color": `hsl(${this.getEdgeColor.h}, ${
-                100 -
-                Math.abs(edge.data("depth")) * this.reciprocalCurrentGraphDepth
-              }%, 50%)`,
+              "line-color": `hsl(${this.getEdgeColor.h}, ${100 -
+                Math.abs(edge.data("depth")) *
+                  this.reciprocalCurrentGraphDepth}%, 50%)`,
               "line-style": "solid", // Valid values: "solid", "dotted", or "dashed"
             });
           });
@@ -2196,7 +2236,7 @@ export default {
             let localThis = this;
             // Apply the flag style
             this.cyto.$("node").style({
-              "background-image": function (node) {
+              "background-image": function(node) {
                 let arr = []; //
                 let flag = localThis.countryFlags.get(node.data("countryCode"));
                 if (node.data("countryCode") && flag) {
@@ -2217,8 +2257,9 @@ export default {
             this.setProgressIndicatorVisibility(true);
             this.setProgressIndicatorMessage("Please wait...");
             for (const domain in this.nodeDomainCluster) {
-              this.nodeDomainCluster[domain].favicon =
-                await this.downloadFavicon_NEW(domain);
+              this.nodeDomainCluster[
+                domain
+              ].favicon = await this.downloadFavicon_NEW(domain);
             }
             // Loop through all nodes and assign favicon
             this.cyto.$("node").forEach((node) => {
@@ -2232,7 +2273,7 @@ export default {
             this.setProgressIndicatorVisibility(false);
           }
           this.cyto.$("node").style({
-            "background-image": function (node) {
+            "background-image": function(node) {
               let arr = []; //
               if (node.data("favicon")) {
                 arr.push(node.data("favicon"));
@@ -2275,8 +2316,7 @@ export default {
 
         // Close the finder
         setTimeout(() => {
-          this.toolbarItems.pathFindersGroup.controlList.pathFindersList.selected =
-            undefined;
+          this.toolbarItems.pathFindersGroup.controlList.pathFindersList.selected = undefined;
         }, 100);
       }
 
@@ -2338,8 +2378,7 @@ export default {
 
     // Hide finder tool
     hidePathFinderTool() {
-      this.toolbarItems.pathFindersGroup.controlList.pathFindersList.selected =
-        undefined;
+      this.toolbarItems.pathFindersGroup.controlList.pathFindersList.selected = undefined;
       // this.closeFinder('path')
       // this.resetPathFinderFoundEdgeList();
       // this.showFinderTool = false;
@@ -2419,13 +2458,11 @@ export default {
       this.resetPathFinderFoundEdgeList();
 
       // this.pathFinderFoundEdgeList = srcCollection.edgesTo(trgtCollection); // Get egdes
-      let result = this.cyto
-        .elements()
-        .aStar({
-          root: `#${srcNode.id()}`,
-          goal: `#${trgtNode.id()}`,
-          directed: true,
-        });
+      let result = this.cyto.elements().aStar({
+        root: `#${srcNode.id()}`,
+        goal: `#${trgtNode.id()}`,
+        directed: true,
+      });
 
       // Check if we have got edges
       // if (this.pathFinderFoundEdgeList.length !== 0) {
@@ -2608,14 +2645,12 @@ export default {
     // Enable/Disable node filter
     enableNodeFilter(enabled) {
       // this.toolbarItems.nodeFilter.disabled = !enabled;
-      this.toolbarItems.nodeFilterGroup.controlList.nodeFilter.disabled =
-        !enabled;
+      this.toolbarItems.nodeFilterGroup.controlList.nodeFilter.disabled = !enabled;
     },
 
     // Enable/Disable screenshot button
     enableScreenshotButton(enabled) {
-      this.toolbarItems.screenshotGroup.controlList.saveScreenshot.disabled =
-        !enabled;
+      this.toolbarItems.screenshotGroup.controlList.saveScreenshot.disabled = !enabled;
     },
 
     // Expand selected node
@@ -2788,15 +2823,37 @@ export default {
 
     // Save screenshot
     saveScreenshot() {
-      this.cyto
-        .png({ output: "blob-promise", full: true, scale: 3 }) // Scale can be option in the settings
-        .then((img) => {
-          let aElement = this.$refs.screenshot_a;
-          let file = new Blob([img], { type: "graph.png" });
-          aElement.href = URL.createObjectURL(file);
-          aElement.download = "graph.png";
-          aElement.click();
-        });
+      // Check if the image format chosen is PNG or JPG
+      if (this.getScreenshotResolution.format == "png") {
+        this.cyto
+          .png({
+            output: "blob-promise",
+            full: true,
+            scale: (this.getScreenshotResolution.value * 2) / 10, // The mathematical operation for keeping the value between (0-2) to not crash
+          }) // Scale can be option in the settings
+          .then((img) => {
+            let aElement = this.$refs.screenshot_a;
+            let file = new Blob([img], { type: "graph.png" });
+            aElement.href = URL.createObjectURL(file);
+            aElement.download = "graph.png";
+            aElement.click();
+          });
+      } else {
+        this.cyto
+          .jpg({
+            output: "blob-promise",
+            full: true,
+            scale: (this.getScreenshotResolution.value * 2) / 10,
+          }) // Scale can be option in the settings
+          .then((img) => {
+            let aElement = this.$refs.screenshot_a;
+            let file = new Blob([img], { type: "graph.jpg" });
+            aElement.href = URL.createObjectURL(file);
+            aElement.download = "graph.jpg";
+            aElement.click();
+          });
+      }
+
       // let aElement = this.$refs.screenshot_a;
       // aElement.href = this.$refs.graph_canvas_ref.firstChild.firstChild.toDataURL();
       // aElement.download = "graph.png";
@@ -3419,7 +3476,7 @@ export default {
       let high = targetList.length - 1;
       let mid = -1;
       let keysList = key.split(".");
-      let accessor = function (index) {
+      let accessor = function(index) {
         let temp = targetList[index];
         for (let i = 0; i < keysList.length; i++) {
           temp = temp[keysList[i]];
@@ -3857,35 +3914,54 @@ export default {
           this.targetURLInSSURT
         )
       );
-      let result = await this.$axios.$get(
-        // this.linkservRequestBaseURLStore["versionCountsYearly"]
-        this.getLinkservRequestURLHub["versionCountsYearly"].replace(
-          "{0}",
-          this.targetURLInSSURT
+      let result = await this.$axios
+        .$get(
+          // this.linkservRequestBaseURLStore["versionCountsYearly"]
+          this.getLinkservRequestURLHub["versionCountsYearly"].replace(
+            "{0}",
+            this.targetURLInSSURT
+          )
         )
-      );
+        .then(this.successLoad)
+        .catch(this.handleLoadError);
+    },
 
-      // Parse the result
-      for (const [key, value] of Object.entries(result)) {
-        this.searchTreeItems.push({
-          // Add "y" prefix for a year item in the tree
-          // id: "y" + key, //generateID(), // id is a MUST for making prop "activable" working
-          id: generateID(), // id is a MUST for making prop "activable" working
-          type: "y", // Type of node is year
-          value: key, // Value
-          name: key, // Display Name
-          children: [],
-        });
-      }
-      // Check that if no entries for years, then display an info for user that there is no result for the URL
-      if (this.searchTreeItems.length === 0) {
-        // Show message box to user with useful info
-        this.popupMessage =
+    // The json response has succeed
+    successLoad(res) {
+      // Check if the json response is empty
+      if (Object.entries(res).length === 0) {
+        this.fetchingBoxMessage.message =
           "No data exists for this URL. Please, check it or try another one.";
-        this.popupMessageTitle = "URL";
-        this.showArrowDirection = null;
-        this.showPopupMessage = true;
+        this.fetchingBoxMessage.title = "URL";
+        this.fetchingBoxMessage.position = "top-right";
+        this.fetchingBoxMessage.border = "left";
+        this.fetchingBoxMessage.type = "warning";
+        this.setShowMessageBox(true);
+      } else {
+        this.setShowMessageBox(false);
+        // Parse the result
+        for (const [key, value] of Object.entries(res)) {
+          this.searchTreeItems.push({
+            // Add "y" prefix for a year item in the tree
+            // id: "y" + key, //generateID(), // id is a MUST for making prop "activable" working
+            id: generateID(), // id is a MUST for making prop "activable" working
+            type: "y", // Type of node is year
+            value: key, // Value
+            name: key, // Display Name
+            children: [],
+          });
+        }
       }
+    },
+
+    // Failed json response so display the error to the user
+    handleLoadError(err) {
+      this.fetchingBoxMessage.title = "Error";
+      this.fetchingBoxMessage.message = err.message;
+      this.fetchingBoxMessage.position = "top-right";
+      this.fetchingBoxMessage.border = "left";
+      this.fetchingBoxMessage.type = "error";
+      this.setShowMessageBox(true);
     },
 
     // Get stored verison count for a given url with a given year per day
@@ -4189,10 +4265,10 @@ export default {
     // Perform some statistics
     readStatisticsData() {
       // Outlinks min and max
-      let minOutlinkCount = this.cyto.nodes().min(function (node) {
+      let minOutlinkCount = this.cyto.nodes().min(function(node) {
         return node.outgoers("edge").length;
       }).value;
-      let maxOutlinkCount = this.cyto.nodes().max(function (node) {
+      let maxOutlinkCount = this.cyto.nodes().max(function(node) {
         return node.outgoers("edge").length;
       }).value;
       this.outlinkCountMinMaxPair = new MinMaxPair(
@@ -4201,10 +4277,10 @@ export default {
       );
 
       // Inlinks min and max
-      let minInlinkCount = this.cyto.nodes().min(function (node) {
+      let minInlinkCount = this.cyto.nodes().min(function(node) {
         return node.incomers("edge").length;
       }).value;
-      let maxInlinkCount = this.cyto.nodes().max(function (node) {
+      let maxInlinkCount = this.cyto.nodes().max(function(node) {
         return node.incomers("edge").length;
       }).value;
       this.inlinkCountMinMaxPair = new MinMaxPair(
@@ -5040,9 +5116,15 @@ export default {
 
         let savedThis = this;
 
-        if (!this.cyto.cxtmenu) {
-          console.log("Initializing cxtmenu plugin...");
+        // Check if cxtmenu was registered
+        if (!savedThis.cyto.cxtmenu) {
+          console.log("Resgister");
           cytoscape.use(cxtmenu); // register extension
+        }
+
+        // Check if cxtmenu1 or cxtmenu2 were initialized
+        if (!this.cyto.cxtmenu1 || !this.cyto.cxtmenu2) {
+          console.log("Initializing cxtmenu plugin...");
           this.cxtmenu1 = this.cyto.cxtmenu({
             selector: "[^specialTemp]", //"node[timestamp]", //'node, edge',
 
@@ -5050,7 +5132,7 @@ export default {
               let arr = [];
               arr.push({
                 content: "Load more",
-                select: function (node) {
+                select: function(node) {
                   console.log(
                     "Load more for node with timestamp = " +
                       node.data("timestamp")
@@ -5062,14 +5144,14 @@ export default {
               });
               arr.push({
                 content: "Fit",
-                select: function (node) {
+                select: function(node) {
                   savedThis.fitNode(node); // View this node
                 },
                 enabled: true,
               });
               arr.push({
                 content: "Show Info",
-                select: function (node) {
+                select: function(node) {
                   // savedThis.toggleInfoBoard();
                   if (savedThis.selectedNode !== node) {
                     savedThis.selectedNode = node;
@@ -5083,7 +5165,7 @@ export default {
               });
               arr.push({
                 content: "Collapse",
-                select: function (node) {
+                select: function(node) {
                   savedThis.collapseNode(node);
                 },
                 enabled: true,
@@ -5100,7 +5182,7 @@ export default {
               let arr = [];
               arr.push({
                 content: "Load more",
-                select: function (node) {
+                select: function(node) {
                   console.log(
                     "Load more for node with timestamp = " +
                       node.data("timestamp")
@@ -5112,7 +5194,7 @@ export default {
               });
               arr.push({
                 content: "Fit",
-                select: function (node) {
+                select: function(node) {
                   savedThis.fitNode(node); // View this node
                   console.log("Fitting for node " + node.id());
                 },
@@ -5120,7 +5202,7 @@ export default {
               });
               arr.push({
                 content: "Show Info",
-                select: function (node) {
+                select: function(node) {
                   // savedThis.toggleInfoBoard();
                   if (savedThis.selectedNode !== node) {
                     savedThis.selectedNode = node;
@@ -5134,7 +5216,7 @@ export default {
               });
               arr.push({
                 content: "Expand",
-                select: function (node) {
+                select: function(node) {
                   savedThis.expandNode(node);
                 },
                 enabled: true,
@@ -5147,6 +5229,7 @@ export default {
         } else {
           console.warn('"cxtmenu" plugin has been already registered');
         }
+
         // Finally, we can conclude that this way is wrong in initialization
         // There is a strange problem that let the div part of the graph expand, so I'll let it be initiallized only one time
         // Try to initialize module (Now it's commented to as the error message states that it's already set)
@@ -5197,6 +5280,33 @@ export default {
         //   this.cytoExpClpAPI = this.cyto.expandCollapse("get");
         //   console.log("Initializing collapse-expand plugin done successfully");
         // }
+
+        // Check if expandCollapse was registered
+        if (!this.cyto.expandCollapse) {
+          cytoscape.use(expandCollapse);
+        }
+
+        // Check if cytoExpClAPI was initialized
+        if (!this.cytoExpClpAPI) {
+          console.log("Initializing collapse-expand plugin...");
+          this.cyto.expandCollapse({
+            // layoutBy: {
+            //   name: "cise", //"cose-bilkent",
+            //   animate: "false",
+            //   randomize: false,
+            //   fit: true,
+            // },
+            cueEnabled: false,
+            undoable: false, // if set to false, no need for installing plugin. If true, plugin have to be installed
+            // expandCueImage: "",
+            // collapseCueImage: "",
+            animate: false,
+            zIndex: 0,
+          });
+          this.cytoExpClpAPI = this.cyto.expandCollapse("get");
+          console.log("Initializing collapse-expand plugin done successfully");
+        }
+
         if (onLayoutReady) {
           // TODO: Urgent!! The parameter is hard coded!!Turn it into a general one immediately
           onLayoutReady(0);
@@ -5247,15 +5357,15 @@ export default {
       if (this.cxtmenu1) {
         console.log("Destroying this.cxtmenu1...");
         this.cxtmenu1.destroy();
-        this.cxtmenu1 = undefined
+        this.cxtmenu1 = undefined;
       }
       if (this.cxtmenu2) {
         console.log("Destroying this.cxtmenu2...");
         this.cxtmenu2.destroy();
-        this.cxtmenu2 = undefined
+        this.cxtmenu2 = undefined;
       }
       if (this.cyto.cxtmenu) {
-        this.cyto.cxtmenu = undefined // Can this work??
+        this.cyto.cxtmenu = undefined; // Can this work??
       }
       cytoscape.use = () => {}; // Can this work?
       this.cyto.destroy();
@@ -5288,9 +5398,10 @@ export default {
 }
 
 .settings-show-button {
-  top: 20%;
+  transform-origin: right bottom !important;
+  top: 10px;
   right: 0;
-  transform: rotate(-90deg) translateY(20px);
+  transform: rotate(-90deg);
   z-index: 3;
 }
 
@@ -5301,6 +5412,7 @@ export default {
 }
 
 .graph-div {
+  position: relative;
   width: 100%;
   height: 100%;
   overflow-y: hidden;
