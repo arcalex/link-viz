@@ -208,7 +208,7 @@
                 <v-select
                   :disabled="
                     getNodeShapeCategoryCurrentIndex ===
-                    getNodeShapeCategoryEnum.favicon
+                      getNodeShapeCategoryEnum.favicon
                   "
                   label="Node shape"
                   :items="getNodeShapeList"
@@ -307,6 +307,52 @@
                 </v-color-picker>
               </v-card-text>
             </v-card>
+            <v-divider></v-divider>
+            <v-card flat>
+              <v-card-title>Screenshot resolution</v-card-title>
+              <v-tooltip left>
+                <template v-slot:activator="{ on, attrs }">
+                  <v-card-text color="primary" dark v-bind="attrs" v-on="on">
+                    <v-slider
+                      prepend-icon="mdi-monitor-screenshot"
+                      v-model="screenshotSlider.val"
+                      :value="getScreenshotResolution.value"
+                      :label="screenshotSlider.label"
+                      :thumb-size="24"
+                      max="10"
+                      min="1"
+                      thumb-label="always"
+                      @change="updateScreenShotResolution"
+                    >
+                      <template v-slot:append>
+                        <v-text-field
+                          v-model="screenshotSlider.val"
+                          :value="getScreenshotResolution.value"
+                          class="mt-0 pt-0"
+                          hide-details
+                          single-line
+                          type="number"
+                          style="width: 60px"
+                          @change="updateScreenShotResolution"
+                        ></v-text-field> </template
+                    ></v-slider>
+                  </v-card-text>
+                </template>
+                <span
+                  >This value specifies the size of the resultant image.</span
+                >
+              </v-tooltip>
+              <v-card-text class="py-0">
+                <v-radio-group
+                  v-model="screenshotFormat"
+                  row
+                  @change="updateScreenShotResolution"
+                >
+                  <v-radio label="PNG" value="png"></v-radio>
+                  <v-radio label="JPG" value="jpg"></v-radio>
+                </v-radio-group>
+              </v-card-text>
+            </v-card>
           </v-card>
         </v-tab-item>
       </v-tabs-items>
@@ -358,6 +404,8 @@ export default {
       nodeSizeCalcIndex: 0,
       nodeColoringMethodColor: {},
       selectedNodeLabelFormatIndex: 0,
+      screenshotFormat: "png",
+      screenshotSlider: { label: "", val: 5 },
     };
   },
 
@@ -381,6 +429,7 @@ export default {
       getOutlinkNodeSizeRange: "getOutlinkNodeSizeRange",
       getLoadedGraphFlag: "getLoadedGraphFlag",
       getSelectedNodeFlag: "getSelectedNodeFlag",
+      getScreenshotResolution: "getScreenshotResolution",
     }),
   },
 
@@ -399,7 +448,16 @@ export default {
       setInlinkNodeSizeRange: "setInlinkNodeSizeRange",
       setOutlinkNodeSizeRange: "setOutlinkNodeSizeRange",
       setUseDifferentStyleForExtEdges: "setUseDifferentStyleForExtEdges",
+      setScreenshotResolution: "setScreenshotResolution",
     }),
+
+    // Set Screenshot Resolution Value and Format
+    updateScreenShotResolution() {
+      this.setScreenshotResolution({
+        value: this.screenshotSlider.val,
+        format: this.screenshotFormat,
+      });
+    },
 
     // Close the dialog settings
     hideSettings() {
@@ -563,7 +621,6 @@ export default {
 .aside-title {
   background-color: rgba(0, 0, 0, 0.5);
   padding: 15px;
-  margin-bottom: 15px;
   border-bottom: 1px dotted lightgray;
 }
 
