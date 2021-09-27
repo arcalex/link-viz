@@ -145,6 +145,9 @@ export const state = () => ({
 
   // MessageBox component Show condition
   showMessageBox: false,
+
+  // Animation Speed
+  animationSpeed: 500,
 });
 
 // Getters
@@ -250,6 +253,9 @@ export const getters = {
   },
   getShowMessageBox(state) {
     return state.showMessageBox;
+  },
+  getAnimationSpeed(state) {
+    return state.animationSpeed;
   },
 };
 
@@ -367,6 +373,9 @@ export const mutations = {
   setShowMessageBox(state, ShowMessageBox) {
     state.showMessageBox = ShowMessageBox;
   },
+  setAnimationSpeed(state, AnimationSpeed) {
+    state.animationSpeed = AnimationSpeed;
+  },
 };
 
 // Actions for changing state
@@ -463,5 +472,8 @@ export const actions = {
   },
   setShowMessageBox({ state, commit }, ShowMessageBox) {
     commit("setShowMessageBox", ShowMessageBox);
+  },
+  setAnimationSpeed({ state, commit }, AnimationSpeed) {
+    commit("setAnimationSpeed", AnimationSpeed);
   },
 };

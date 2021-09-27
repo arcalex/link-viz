@@ -1715,6 +1715,7 @@ export default {
       getPathFinderTarget: "getPathFinderTarget",
       getUseDifferentStyleForExtEdges: "getUseDifferentStyleForExtEdges",
       getRequestNodeIDList: "getRequestNodeIDList",
+      getAnimationSpeed: "getAnimationSpeed",
     }),
 
     // // Return type of finder
@@ -3389,7 +3390,7 @@ export default {
               style: { opacity: "1" /*, "background-color": "blue" */ },
             },
             {
-              duration: this.$config.frameTime,
+              duration: this.getAnimationSpeed,
               complete: () => {
                 console.log("Showing Animation complete");
                 self.showingAnimationPromiseResolver = null; // No need for this resolver
@@ -3417,7 +3418,7 @@ export default {
               style: { opacity: "0.2" /*, "background-color": "red" */ }, // Better to let the node visible with a lower opacity value
             },
             {
-              duration: this.$config.frameTime,
+              duration: this.getAnimationSpeed,
               complete: () => {
                 console.log("Hiding Animation complete");
                 self.hidingAnimationPromiseResolver = null; // No need for this resolver
@@ -3434,7 +3435,7 @@ export default {
           this.timeoutPromiseResolver = resolve;
           this.animationTimeoutTimer = setTimeout(
             resolve,
-            this.$config.frameTime
+            this.getAnimationSpeed
           );
         }).then(() => {
           console.log("advanceToFrame, setTimeout has just finished");

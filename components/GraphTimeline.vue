@@ -41,6 +41,33 @@
           {{ value }}
         </template>
       </v-slider>
+      <!-- Animation Speed -->
+      <v-menu top offset-x>
+        <template v-slot:activator="{ on: menu, attrs }">
+          <v-tooltip top>
+            <template v-slot:activator="{ on: tooltip }">
+              <v-btn icon v-bind="attrs" v-on="{ ...tooltip, ...menu }">
+                <v-icon>mdi-speedometer</v-icon>
+              </v-btn>
+            </template>
+            <span>Animation Speed</span>
+          </v-tooltip>
+        </template>
+        <v-list flat>
+          <v-list-item-group v-model="selectedSpeed" color="rgb(206, 115, 48)">
+            <v-list-item
+              v-for="(item, i) in speedOptions"
+              :key="i"
+              @click="updateAnimationSpeed(item)"
+            >
+              <v-list-item-content>
+                <v-list-item-title v-text="item.title"></v-list-item-title>
+              </v-list-item-content>
+            </v-list-item>
+          </v-list-item-group>
+        </v-list>
+      </v-menu>
+      <!-- END -->
     </div>
   </div>
 </template>
@@ -71,10 +98,19 @@
 /**
  * Ui of graph timeline
  */
+import { mapActions, mapGetters } from "vuex";
+
 export default {
   data: () => ({
     // currentAnimationAction: "ready", // valid values: 'ready', 'playing'
     repeat: false, // Repeat Playing
+    speedOptions: [
+      { title: "0.5", speed: 500 * 2 },
+      { title: "Normal", speed: 500 },
+      { title: "1.5", speed: (500 * 2) / 3 },
+      { title: "2", speed: 500 / 2 },
+    ],
+    selectedSpeed: 1,
   }),
   props: {
     animationAction: {
@@ -109,6 +145,9 @@ export default {
     },
   },
   methods: {
+    ...mapActions({
+      setAnimationSpeed: "setAnimationSpeed",
+    }),
     // Play animation from current progress bar
     doAnimationAction() {
       switch (this.animationAction) {
@@ -132,6 +171,11 @@ export default {
     // Update timelime if user moves the slider
     updateTimeline(value) {
       this.$emit("updateCurVal", value);
+    },
+
+    //Update Animation Speed
+    updateAnimationSpeed(i) {
+      this.setAnimationSpeed(i.speed);
     },
     // Pause animation if playing
     // pauseAnimation() {},
@@ -160,6 +204,6 @@ export default {
   min-width: 150px;
 }
 .v-slider__tick-label {
-    transform: rotate(-45deg) translate(-22px,-15px) !important;
+  transform: rotate(-45deg) translate(-22px, -15px) !important;
 }
 </style>
