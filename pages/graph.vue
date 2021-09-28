@@ -900,7 +900,8 @@ export default {
       // if zero, the parameter has no effect
       depthMaxAllowedValue: 10, // Maximum allowed value for depth
       // currentGraphDepth: 1 /*null*/ /* For now, let it be 1  */, // Current Load graph depth. If null, no graph is loaded till now
-      // reciprocalCurrentGraphDepth: null, // 1.0 / currentGraphDepth
+      reciprocalCurrentGraphDepth: 1.0, // currentGraphDepth
+      edgesColorRatio: 100,
       cytoExpClpAPI: null, //{},
       // compoundNodes: [],
       // filteredNodes: null,
@@ -1714,6 +1715,7 @@ export default {
       getPathFinderTarget: "getPathFinderTarget",
       getUseDifferentStyleForExtEdges: "getUseDifferentStyleForExtEdges",
       getRequestNodeIDList: "getRequestNodeIDList",
+      getAnimationSpeed: "getAnimationSpeed",
     }),
 
     // // Return type of finder
@@ -1742,6 +1744,7 @@ export default {
       // setPathFinderMessage: "setPathFinderMessage",
       setPathFinderMessageType: "setPathFinderMessageType",
       setResponseNodeDataList: "setResponseNodeDataList",
+      setSelectedSnapshotList: "setSelectedSnapshotList",
     }),
 
     setMaximumDepth(value) {
@@ -1806,9 +1809,12 @@ export default {
         case this.getEdgeColoringMethodEnum.uniform:
           // Color All edges with uniform color
           this.cyto.$("edge").style({
-            // "line-color": `rgb(${this.getEdgeColor.rgba.r},${this.getEdgeColor.rgba.g},${this.getEdgeColor.rgba.b})`,
+            // "line-color": `hsl(${this.getEdgeColor.r},${this.getEdgeColor.g},${this.getEdgeColor.b})`,
             "line-color": `hsl(${this.getEdgeColor.h},${this.getEdgeColor.s *
               100}%,${this.getEdgeColor.l * 100}%)`,
+            "target-arrow-color": `hsl(${this.getEdgeColor.h},${this
+              .getEdgeColor.s * 100}%,${this.getEdgeColor.l * 100}%)`,
+            opacity: `${this.getEdgeColor.a}`,
           });
           break;
 
@@ -2020,28 +2026,45 @@ export default {
       // unvisitedNodeQueue = [];
       // // this.cyto.$(`#${this.rootNodeID}`).outgoers("edge");
 
+      this.edgesColorRatio = 100 / this.maximumDepth_NEW;
       let colorEdgeWithinGraph = this.getUseDifferentStyleForExtEdges
         ? // Use this function for coloring with consideration of
           (edge) => {
             const depth = edge.data("depth");
-            if (depth >= 0) {
+            if (depth > 0) {
               edge.style({
                 "line-color": `hsl(${this.getEdgeColor.h}, ${100 -
-                  depth * this.reciprocalCurrentGraphDepth}%, 50%)`,
+                  (Math.abs(edge.data("depth")) - 1) *
+                    this.edgesColorRatio}%, 50%)`,
+                "target-arrow-color": `hsl(${this.getEdgeColor.h}, ${100 -
+                  (Math.abs(edge.data("depth")) - 1) *
+                    this.edgesColorRatio}%, 50%)`,
+                opacity: `${this.getEdgeColor.a}`,
                 "line-style": "solid", // Valid values: "solid", "dotted", or "dashed"
               });
             } else {
               edge.style({
-                "line-color": "white",
+                "line-color": "#969696",
+                "target-arrow-color": "#969696",
                 "line-style": "dashed", // Valid values: "solid", "dotted", or "dashed"
               });
             }
           }
         : (edge) => {
+            console.log("else1");
+            console.log(Math.abs(edge.data("depth")) - 1);
+            console.log(
+              `Second: ${100 -
+                (Math.abs(edge.data("depth")) - 1) * this.edgesColorRatio}%`
+            );
             edge.style({
               "line-color": `hsl(${this.getEdgeColor.h}, ${100 -
-                Math.abs(edge.data("depth")) *
-                  this.reciprocalCurrentGraphDepth}%, 50%)`,
+                (Math.abs(edge.data("depth")) - 1) *
+                  this.edgesColorRatio}%, 50%)`,
+              "target-arrow-color": `hsl(${this.getEdgeColor.h}, ${100 -
+                (Math.abs(edge.data("depth")) - 1) *
+                  this.edgesColorRatio}%, 50%)`,
+              opacity: `${this.getEdgeColor.a}`,
               "line-style": "solid", // Valid values: "solid", "dotted", or "dashed"
             });
           };
@@ -2050,7 +2073,8 @@ export default {
         ? (edge) => {
             edge.style({
               // "line-color": `rgb(${this.getEdgeColor.rgba.r},${this.getEdgeColor.rgba.g},${this.getEdgeColor.rgba.b})`,
-              "line-color": "white",
+              "line-color": "#969696",
+              "target-arrow-color": "#969696",
               "line-style": "dashed", // Valid values: "solid", "dotted", or "dashed"
             });
           }
@@ -2065,37 +2089,29 @@ export default {
       // Check if attribute "depth" is defined for edges or not
       if (this.cyto.edges()[0].data("depth")) {
         // Depth attribute is added to edge, so looping through edges will be straight forward
-        this.cyto.$("edge[depth >= 0]").forEach((edge) => {
+        this.cyto.$("edge[depth > 0]").forEach((edge) => {
+          console.log(edge.data());
           edge.style({
             "line-color": `hsl(${this.getEdgeColor.h}, ${100 -
-              edge.data("depth") * this.reciprocalCurrentGraphDepth}%, 50%)`,
+              (Math.abs(edge.data("depth")) - 1) *
+                this.edgesColorRatio}%, 50%)`,
+            "target-arrow-color": `hsl(${this.getEdgeColor.h}, ${100 -
+              (Math.abs(edge.data("depth")) - 1) *
+                this.edgesColorRatio}%, 50%)`,
+            opacity: `${this.getEdgeColor.a}`,
             "line-style": "solid", // Valid values: "solid", "dotted", or "dashed"
           });
         });
         if (this.getUseDifferentStyleForExtEdges) {
           this.cyto.$("edge[depth < 0]").style({
-            "line-color": "white",
+            "line-color": "#969696",
+            "target-arrow-color": "#969696",
             "line-style": "dashed", // Valid values: "solid", "dotted", or "dashed"
-          });
-        } else {
-          this.cyto
-            .$(`edge[depth < 0][depth != ${Number.MIN_SAFE_INTEGER}]`)
-            .style({
-              "line-color": `hsl(${this.getEdgeColor.h}, ${100 -
-                Math.abs(edge.data("depth")) *
-                  this.reciprocalCurrentGraphDepth}%, 50%)`,
-              "line-style": "solid", // Valid values: "solid", "dotted", or "dashed"
-            });
-          // For disjoint graph(s), let their color be constant
-          this.cyto.$(`edge[depth = ${Number.MIN_SAFE_INTEGER}]`).style({
-            // "line-color": `rgb(${this.getEdgeColor.rgba.r},${this.getEdgeColor.rgba.g},${this.getEdgeColor.rgba.b})`,
-            "line-color": `hsl(${this.getEdgeColor.h}, 100%, 50%)`,
-            "line-style": "solid", // Valid values: "solid", "dotted", or "dashed"
           });
         }
       } else {
         // Compute edge weight only once
-        computeEdgeWeight(colorEdgeWithinGraph, colorEdgeInDisjointGraph);
+        this.computeEdgeWeight(colorEdgeWithinGraph, colorEdgeInDisjointGraph);
       }
     },
 
@@ -2106,7 +2122,8 @@ export default {
         // TODO: Add handling the case of disjoint graph
         this.cyto.$(`edge[depth < 0]`).style({
           // "line-color": `rgb(${this.getEdgeColor.rgba.r},${this.getEdgeColor.rgba.g},${this.getEdgeColor.rgba.b})`,
-          "line-color": "white",
+          "line-color": "#969696",
+          "target-arrow-color": "#969696",
           "line-style": "dashed", // Valid values: "solid", "dotted", or "dashed"
         });
       } else {
@@ -2116,14 +2133,18 @@ export default {
           .$(`edge[depth < 0][depth != ${Number.MIN_SAFE_INTEGER}]`)
           .forEach((edge) => {
             edge.style({
-              // "line-color": `rgb(${this.getEdgeColor.rgba.r},${this.getEdgeColor.rgba.g},${this.getEdgeColor.rgba.b})`,
               "line-color": `hsl(${this.getEdgeColor.h}, ${100 -
-                Math.abs(edge.data("depth")) *
-                  this.reciprocalCurrentGraphDepth}%, 50%)`,
+                (Math.abs(edge.data("depth")) - 1) *
+                  this.edgesColorRatio}%, 50%)`,
+              "target-arrow-color": `hsl(${this.getEdgeColor.h}, ${100 -
+                (Math.abs(edge.data("depth")) - 1) *
+                  this.edgesColorRatio}%, 50%)`,
+              opacity: `${this.getEdgeColor.a}`,
               "line-style": "solid", // Valid values: "solid", "dotted", or "dashed"
             });
           });
 
+        // TODO: Check this part again
         // For disjoint graph(s), let their color be constant
         this.cyto.$(`edge[depth = ${Number.MIN_SAFE_INTEGER}]`).style({
           // "line-color": `rgb(${this.getEdgeColor.rgba.r},${this.getEdgeColor.rgba.g},${this.getEdgeColor.rgba.b})`,
@@ -2136,7 +2157,7 @@ export default {
     // compute a weight for the edges in order to simplify coloring according to depth
     computeEdgeWeight(
       colorEdgeWithingGraph = (edge) => {}, // Color edge in the same graph
-      colorEdgeInDisjointGraph = (disjointEdge) => {} // Color edge in disjoint graph
+      colorEdgeInDisjointGraph = (edge) => {} // Color edge in disjoint graph
     ) {
       // This should be done once per graph
       let visitedNodeList = []; // Hold visited nodes
@@ -2144,9 +2165,12 @@ export default {
         // Hold unvisited node in queue structure
         {
           node: this.cyto.$(`#${this.rootNodeID}`),
-          depth: 0, //1,
+          depth: 1,
         },
       ];
+
+      const vnLength = this.cyto.$(`#${this.rootNodeID}`).outgoers("edge")
+        .length;
       const domainName = this.getDomainName(
         this.cyto.$(`#${this.rootNodeID}`).data("url")
       ); // main domain node
@@ -2155,27 +2179,36 @@ export default {
       while (unvisitedNodeQueue.length > 0) {
         // Grab node from "unvisitedNodeQueue"
         let { node, depth } = unvisitedNodeQueue.shift();
-
         // Loop through all outgoers edges
-        node.outgoers("edge").forEach((edge) => {
-          // Check if the tagret belongs to the same domain
-          if (domainName === this.getDomainName(edge.target().data("url"))) {
+        let outgoers = node.outgoers("edge");
+        outgoers.forEach((edge) => {
+          let targetNode = edge.target();
+          if (domainName === this.getDomainName(targetNode.data("url"))) {
+            // Check if the tagret belongs to the same domain
             // Belongs to same domain
             edge.data("depth", depth); // add new weight for depth
           } else {
             edge.data("depth", -depth); // add new weight for depth with negative number
           }
-          // After adding depth to edge, call a color function if exists
-          colorEdgeWithingGraph(edge);
 
           // Check the target node if it's visited
-          let targetNode = edge.target();
-          if (!visitedNodeList.includes(targetNode)) {
-            unvisitedNodeQueue.push({ node: targetNode, depth: depth + 1 });
+          if (edge.isLoop()) {
+            console.log("loop");
+            // if (targetNode === node) { // not working
+            visitedNodeList.push(targetNode);
           }
+          if (!visitedNodeList.includes(targetNode)) {
+            unvisitedNodeQueue.push({
+              node: targetNode,
+              depth: Math.abs(depth) + 1,
+            });
+          }
+          // After adding depth to edge, call a color function if exists
+          colorEdgeWithingGraph(edge);
         });
         visitedNodeList.push(node);
       }
+
       // Clear arrays
       visitedNodeList = [];
       unvisitedNodeQueue = [];
@@ -2184,6 +2217,7 @@ export default {
       // So, we should find them
       // TODO: Add a handler for the case of more than one disjoints graph (done)
       // TODO: Try to optimize it if needed
+      // TODO: Check this part again
       this.cyto.$("edge[!depth]").forEach((edge) => {
         edge.data("depth", Number.MIN_SAFE_INTEGER); // This integer value indicates that this edge is disjoint from the graph
         colorEdgeInDisjointGraph(edge);
@@ -2929,6 +2963,8 @@ export default {
         { name: "URL", value: this.targetURL }, // URL
         { name: "Snapshot Count", value: this.timelineSnapshotList.length } // Extract year part
       );
+
+      this.setSelectedSnapshotList(this.selectedSnapshotList);
       //this.setProgressIndicatorVisibility(false);
     },
 
@@ -3357,7 +3393,7 @@ export default {
               style: { opacity: "1" /*, "background-color": "blue" */ },
             },
             {
-              duration: this.$config.frameTime,
+              duration: this.getAnimationSpeed,
               complete: () => {
                 console.log("Showing Animation complete");
                 self.showingAnimationPromiseResolver = null; // No need for this resolver
@@ -3385,7 +3421,7 @@ export default {
               style: { opacity: "0.2" /*, "background-color": "red" */ }, // Better to let the node visible with a lower opacity value
             },
             {
-              duration: this.$config.frameTime,
+              duration: this.getAnimationSpeed,
               complete: () => {
                 console.log("Hiding Animation complete");
                 self.hidingAnimationPromiseResolver = null; // No need for this resolver
@@ -3402,7 +3438,7 @@ export default {
           this.timeoutPromiseResolver = resolve;
           this.animationTimeoutTimer = setTimeout(
             resolve,
-            this.$config.frameTime
+            this.getAnimationSpeed
           );
         }).then(() => {
           console.log("advanceToFrame, setTimeout has just finished");
