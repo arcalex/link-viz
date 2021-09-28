@@ -1744,6 +1744,7 @@ export default {
       // setPathFinderMessage: "setPathFinderMessage",
       setPathFinderMessageType: "setPathFinderMessageType",
       setResponseNodeDataList: "setResponseNodeDataList",
+      setSelectedSnapshotList: "setSelectedSnapshotList",
     }),
 
     setMaximumDepth(value) {
@@ -2962,6 +2963,8 @@ export default {
         { name: "URL", value: this.targetURL }, // URL
         { name: "Snapshot Count", value: this.timelineSnapshotList.length } // Extract year part
       );
+
+      this.setSelectedSnapshotList(this.selectedSnapshotList);
       //this.setProgressIndicatorVisibility(false);
     },
 

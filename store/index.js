@@ -148,6 +148,9 @@ export const state = () => ({
 
   // Animation Speed
   animationSpeed: 500,
+
+  //Selected Snapshot list
+  selectedSnapshotList: [],
 });
 
 // Getters
@@ -256,6 +259,9 @@ export const getters = {
   },
   getAnimationSpeed(state) {
     return state.animationSpeed;
+  },
+  getSelectedSnapshotList(state) {
+    return state.selectedSnapshotList;
   },
 };
 
@@ -376,6 +382,9 @@ export const mutations = {
   setAnimationSpeed(state, AnimationSpeed) {
     state.animationSpeed = AnimationSpeed;
   },
+  setSelectedSnapshotList(state, SelectedSnapshotList) {
+    state.selectedSnapshotList = SelectedSnapshotList;
+  },
 };
 
 // Actions for changing state
@@ -475,5 +484,8 @@ export const actions = {
   },
   setAnimationSpeed({ state, commit }, AnimationSpeed) {
     commit("setAnimationSpeed", AnimationSpeed);
+  },
+  setSelectedSnapshotList({ state, commit }, SelectedSnapshotList) {
+    commit("setSelectedSnapshotList", SelectedSnapshotList);
   },
 };
