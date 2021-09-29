@@ -309,10 +309,18 @@
             </v-card>
             <v-divider></v-divider>
             <v-card flat>
-              <v-card-title>Screenshot resolution</v-card-title>
+              <v-card-title class="mb-3">Screenshot</v-card-title>
+
+              <v-card-subtitle>Resolution</v-card-subtitle>
               <v-tooltip left>
                 <template v-slot:activator="{ on, attrs }">
-                  <v-card-text color="primary" dark v-bind="attrs" v-on="on">
+                  <v-card-text
+                    color="primary"
+                    dark
+                    v-bind="attrs"
+                    v-on="on"
+                    class="no-cursor"
+                  >
                     <v-slider
                       prepend-icon="mdi-monitor-screenshot"
                       v-model="screenshotSlider.val"
@@ -342,14 +350,26 @@
                   >This value specifies the size of the resultant image.</span
                 >
               </v-tooltip>
+              <v-card-subtitle>File Format</v-card-subtitle>
               <v-card-text class="py-0">
                 <v-radio-group
                   v-model="screenshotFormat"
-                  row
                   @change="updateScreenShotResolution"
                 >
                   <v-radio label="PNG" value="png"></v-radio>
                   <v-radio label="JPG" value="jpg"></v-radio>
+                </v-radio-group>
+              </v-card-text>
+              <v-card-subtitle>Background</v-card-subtitle>
+              <v-card-text class="py-0">
+                <v-radio-group
+                  v-model="screenshotBg"
+                  @change="updateScreenShotResolution"
+                >
+                  <v-radio
+                    label="Default (PNG: Transparent, JPG: White)"
+                  ></v-radio>
+                  <v-radio label="As Chosen Background Color"></v-radio>
                 </v-radio-group>
               </v-card-text>
             </v-card>
@@ -406,6 +426,7 @@ export default {
       selectedNodeLabelFormatIndex: 0,
       screenshotFormat: "png",
       screenshotSlider: { label: "", val: 5 },
+      screenshotBg: 0, //Default -> 0 , As Background Color -> 1
     };
   },
 
@@ -456,6 +477,7 @@ export default {
       this.setScreenshotResolution({
         value: this.screenshotSlider.val,
         format: this.screenshotFormat,
+        background: this.screenshotBg,
       });
     },
 
@@ -635,5 +657,9 @@ export default {
 
 .navigation-drawer {
   z-index: 3;
+}
+
+.no-cursor {
+  cursor: default !important;
 }
 </style>
