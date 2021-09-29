@@ -137,6 +137,7 @@ export const state = () => ({
     screenshotResolution: {
       value: 5, // Screenshot resolution value
       format: "png", // Screenshot file format
+      background: 0, // Screenshot Background Default
     },
   },
 

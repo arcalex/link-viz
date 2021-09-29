@@ -2857,6 +2857,7 @@ export default {
 
     // Save screenshot
     saveScreenshot() {
+      let { a, r, g, b } = this.getBackgroundColor;
       // Check if the image format chosen is PNG or JPG
       if (this.getScreenshotResolution.format == "png") {
         this.cyto
@@ -2864,6 +2865,9 @@ export default {
             output: "blob-promise",
             full: true,
             scale: (this.getScreenshotResolution.value * 2) / 10, // The mathematical operation for keeping the value between (0-2) to not crash
+            bg: this.getScreenshotResolution.background
+              ? `rgba(${r},${g},${b},${a})`
+              : "transparent",
           }) // Scale can be option in the settings
           .then((img) => {
             let aElement = this.$refs.screenshot_a;
@@ -2878,6 +2882,9 @@ export default {
             output: "blob-promise",
             full: true,
             scale: (this.getScreenshotResolution.value * 2) / 10,
+            bg: this.getScreenshotResolution.background
+              ? `rgba(${r},${g},${b},${a})`
+              : "white",
           }) // Scale can be option in the settings
           .then((img) => {
             let aElement = this.$refs.screenshot_a;
@@ -3969,7 +3976,7 @@ export default {
         this.fetchingBoxMessage.message =
           "No data exists for this URL. Please, check it or try another one.";
         this.fetchingBoxMessage.title = "URL";
-        this.fetchingBoxMessage.position = "top-right";
+        this.fetchingBoxMessage.position = "center";
         this.fetchingBoxMessage.border = "left";
         this.fetchingBoxMessage.type = "warning";
         this.setShowMessageBox(true);
@@ -3994,7 +4001,7 @@ export default {
     handleLoadError(err) {
       this.fetchingBoxMessage.title = "Error";
       this.fetchingBoxMessage.message = err.message;
-      this.fetchingBoxMessage.position = "top-right";
+      this.fetchingBoxMessage.position = "center";
       this.fetchingBoxMessage.border = "left";
       this.fetchingBoxMessage.type = "error";
       this.setShowMessageBox(true);
