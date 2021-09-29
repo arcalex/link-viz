@@ -253,7 +253,7 @@
         <v-tab-item>
           <!-- <v-card :disabled="!getLoadedGraphFlag" class="d-flex flex-column"> -->
           <!-- For now, let it be disabled all the time-->
-          <v-card :disabled="true" class="d-flex flex-column">
+          <v-card :disabled="!getLoadedGraphFlag" class="d-flex flex-column">
             <v-card flat>
               <v-card-title>Color</v-card-title>
               <v-card-text>
@@ -263,7 +263,7 @@
                   @change="setEdgeColoringMethodCurrentIndex"
                   v-model="selectedEdgeColorTypeIndex"
                 >
-                  <span>Edge color method</span>
+                  <p>Edge color method</p>
                   <v-radio
                     v-for="value in getEdgeColoringMethodEnum"
                     :label="getEdgeColoringMethodEnumLabel(value)"
@@ -272,13 +272,13 @@
                   </v-radio>
                 </v-radio-group>
                 <v-color-picker
-                  hide-canvas
+                  :hide-canvas="selectedEdgeColorTypeIndex === 1"
                   @update:color="updateEdgeColor"
                   :value="getEdgeColor"
                 >
                 </v-color-picker>
                 <v-switch
-                  label="Use white color and dashed line(s) for external edge(s)"
+                  label="Use dashed line(s) for external edge(s)"
                   @change="setUseDifferentStyleForExtEdges"
                   :disabled="selectedEdgeColorTypeIndex === 0"
                 >
@@ -590,11 +590,11 @@ export default {
       let label = "";
       switch (value) {
         case this.getEdgeColoringMethodEnum.uniform:
-          label = "short";
+          label = "Uniform";
           break;
 
         case this.getEdgeColoringMethodEnum.domainNameAndDepth:
-          label = "long";
+          label = "Domain Name And Depth";
           break;
 
         default:

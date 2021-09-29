@@ -145,6 +145,12 @@ export const state = () => ({
 
   // MessageBox component Show condition
   showMessageBox: false,
+
+  // Animation Speed
+  animationSpeed: 500,
+
+  //Selected Snapshot list
+  selectedSnapshotList: [],
 });
 
 // Getters
@@ -250,6 +256,12 @@ export const getters = {
   },
   getShowMessageBox(state) {
     return state.showMessageBox;
+  },
+  getAnimationSpeed(state) {
+    return state.animationSpeed;
+  },
+  getSelectedSnapshotList(state) {
+    return state.selectedSnapshotList;
   },
 };
 
@@ -367,6 +379,12 @@ export const mutations = {
   setShowMessageBox(state, ShowMessageBox) {
     state.showMessageBox = ShowMessageBox;
   },
+  setAnimationSpeed(state, AnimationSpeed) {
+    state.animationSpeed = AnimationSpeed;
+  },
+  setSelectedSnapshotList(state, SelectedSnapshotList) {
+    state.selectedSnapshotList = SelectedSnapshotList;
+  },
 };
 
 // Actions for changing state
@@ -463,5 +481,11 @@ export const actions = {
   },
   setShowMessageBox({ state, commit }, ShowMessageBox) {
     commit("setShowMessageBox", ShowMessageBox);
+  },
+  setAnimationSpeed({ state, commit }, AnimationSpeed) {
+    commit("setAnimationSpeed", AnimationSpeed);
+  },
+  setSelectedSnapshotList({ state, commit }, SelectedSnapshotList) {
+    commit("setSelectedSnapshotList", SelectedSnapshotList);
   },
 };
