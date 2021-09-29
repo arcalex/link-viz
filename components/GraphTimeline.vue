@@ -239,6 +239,7 @@ export default {
   opacity: 1;
 }
 .inner-graph-timeline-div {
+  border-radius: 12px 12px 0 0;
   /*bottom: 0%;*/ /* Stick to buttom */
   /* left: 40%; */
   /* position: absolute; */

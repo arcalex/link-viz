@@ -3976,7 +3976,7 @@ export default {
         this.fetchingBoxMessage.message =
           "No data exists for this URL. Please, check it or try another one.";
         this.fetchingBoxMessage.title = "URL";
-        this.fetchingBoxMessage.position = "top-right";
+        this.fetchingBoxMessage.position = "center";
         this.fetchingBoxMessage.border = "left";
         this.fetchingBoxMessage.type = "warning";
         this.setShowMessageBox(true);
@@ -4001,7 +4001,7 @@ export default {
     handleLoadError(err) {
       this.fetchingBoxMessage.title = "Error";
       this.fetchingBoxMessage.message = err.message;
-      this.fetchingBoxMessage.position = "top-right";
+      this.fetchingBoxMessage.position = "center";
       this.fetchingBoxMessage.border = "left";
       this.fetchingBoxMessage.type = "error";
       this.setShowMessageBox(true);
